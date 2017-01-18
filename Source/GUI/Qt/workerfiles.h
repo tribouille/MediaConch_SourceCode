@@ -20,6 +20,44 @@ namespace MediaConch {
 class FileRegistered;
 class MainWindow;
 class DatabaseUi;
+class WorkerFiles;
+
+class WorkerFilesValidate : public QThread
+{
+    Q_OBJECT
+
+public:
+    explicit WorkerFilesValidate(MainWindow* m, WorkerFiles* w);
+    virtual ~WorkerFilesValidate();
+
+    // Thread
+    void run();
+    void add_file_to_validation(const std::string& file, FileRegistered*);
+
+private Q_SLOTS:
+    void validate();
+
+private:
+    struct ValidateFileInfo
+    {
+        ValidateFileInfo() : running(false) {}
+
+        std::string     file;
+        FileRegistered* fr;
+        bool            running;
+    };
+
+    MainWindow                     *mainwindow;
+    WorkerFiles                    *worker;
+
+    std::vector<ValidateFileInfo*>  to_validate_files;
+    QMutex                          to_validate_files_mutex;
+
+    unsigned                        max_threads;
+    unsigned                        current;
+    QMutex                          current_mutex;
+
+};
 
 class WorkerFiles : public QThread
 {
@@ -47,6 +85,7 @@ public:
     long get_id_from_registered_file(const std::string& file);
     std::string get_filename_from_registered_file_id(long file_id);
     void update_policy_of_file_registered_from_file(long file_id, int policy);
+    void update_validate(const std::string& file, FileRegistered*);
 
 private:
     void add_registered_file_to_db(const FileRegistered* file);
@@ -70,6 +109,7 @@ private:
     MainWindow                             *mainwindow;
     DatabaseUi                             *db;
     QTimer                                 *timer;
+    WorkerFilesValidate                    *validator;
     size_t                                  file_index;
 
     std::map<std::string, FileRegistered*>  working_files;

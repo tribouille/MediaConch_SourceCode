@@ -17,13 +17,163 @@
 namespace MediaConch {
 
 //***************************************************************************
-// Constructor / Desructor
+// Constructor / Desructor WorkerFilesValidate
+//***************************************************************************
+
+//---------------------------------------------------------------------------
+WorkerFilesValidate::WorkerFilesValidate(MainWindow* m, WorkerFiles* w) : QThread(), mainwindow(m), worker(w),
+                                                                          max_threads(1), current(0)
+{
+}
+
+//---------------------------------------------------------------------------
+WorkerFilesValidate::~WorkerFilesValidate()
+{
+}
+
+//---------------------------------------------------------------------------
+void WorkerFilesValidate::run()
+{
+    validate();
+}
+
+//---------------------------------------------------------------------------
+void WorkerFilesValidate::validate()
+{
+    to_validate_files_mutex.lock();
+
+    if (!to_validate_files.size())
+    {
+        to_validate_files_mutex.unlock();
+        return;
+    }
+
+    current_mutex.lock();
+    if (current >= max_threads)
+    {
+        current_mutex.unlock();
+        return;
+    }
+
+    ++current;
+    current_mutex.unlock();
+
+    size_t pos = 0;
+    for (; pos < to_validate_files.size(); ++pos)
+        if (!to_validate_files[pos]->running)
+            break;
+
+    FileRegistered *fr = new FileRegistered(*to_validate_files[pos]->fr);
+    std::string file = to_validate_files[pos]->file;
+    to_validate_files[pos]->running = true;
+
+    to_validate_files_mutex.unlock();
+
+    std::vector<size_t> policies_ids;
+    std::vector<std::string> policies_contents;
+    std::map<std::string, std::string> options;
+    std::vector<MediaConchLib::Checker_ValidateRes*> res;
+    std::string err;
+    if (mainwindow->validate((MediaConchLib::report)fr->report_kind, file,
+                             policies_ids, policies_contents, options, res, err) < 0)
+        mainwindow->set_str_msg_to_status_bar(err);
+    else if (!res.size())
+        mainwindow->set_str_msg_to_status_bar("Internal error: Validate result is not correct.");
+    else
+        fr->implementation_valid = res[0]->valid;
+
+    for (size_t j = 0; j < res.size(); ++j)
+        delete res[j];
+    res.clear();
+
+    if (fr->policy >= 0)
+    {
+        policies_ids.push_back(fr->policy);
+
+        if (mainwindow->validate(MediaConchLib::report_Max, file,
+                                 policies_ids, policies_contents, options, res, err) < 0)
+            mainwindow->set_str_msg_to_status_bar(err);
+        else if (!res.size())
+            mainwindow->set_str_msg_to_status_bar("Internal error: Validate result is not correct.");
+        else
+            fr->policy_valid = res[0]->valid;
+
+        for (size_t j = 0; j < res.size(); ++j)
+            delete res[j];
+        res.clear();
+    }
+
+    fr->analyzed = true;
+
+    to_validate_files_mutex.lock();
+
+    worker->update_validate(file, fr);
+
+    if (to_validate_files.size() > pos)
+    {
+        for (size_t i = 0; i < pos || i < to_validate_files.size(); ++i)
+        {
+            if (to_validate_files[i]->file == file)
+            {
+                delete to_validate_files[i];
+                to_validate_files.erase(to_validate_files.begin() + i);
+                break;
+            }
+        }
+    }
+    to_validate_files_mutex.unlock();
+
+    current_mutex.lock();
+    --current;
+    current_mutex.unlock();
+    validate();
+}
+
+void WorkerFilesValidate::add_file_to_validation(const std::string& file, FileRegistered* fr)
+{
+    if (!fr)
+        return;
+
+    to_validate_files_mutex.lock();
+    size_t i = 0;
+    for (; i < to_validate_files.size(); ++i)
+    {
+        if (to_validate_files[i]->file == file)
+        {
+            if (i < 1)
+            {
+                quit();
+                wait(0);
+            }
+
+            to_validate_files[i]->fr = new FileRegistered(*fr);
+            break;
+        }
+    }
+
+    if (i == to_validate_files.size())
+    {
+        //TODO add
+        ValidateFileInfo* info = new ValidateFileInfo;
+        info->file = file;
+        info->fr = new FileRegistered(*fr);
+        to_validate_files.push_back(info);
+    }
+
+    to_validate_files_mutex.unlock();
+    start();
+}
+
+//***************************************************************************
+// Constructor / Desructor WorkerFiles
 //***************************************************************************
 
 //---------------------------------------------------------------------------
 WorkerFiles::WorkerFiles(MainWindow* m) : QThread(), mainwindow(m), db(NULL), timer(NULL),
                                           file_index(0)
 {
+    validator = new WorkerFilesValidate(m, this);
+    validator->start();
 }
 
 //---------------------------------------------------------------------------
@@ -34,6 +184,14 @@ WorkerFiles::~WorkerFiles()
         timer->stop();
         delete timer;
         timer = NULL;
+    }
+
+    if (validator)
+    {
+        validator->quit();
+        validator->wait(500);
+        delete validator;
+        validator = NULL;
     }
 }
 
@@ -444,51 +602,13 @@ void WorkerFiles::update_unfinished_files()
             continue;
         }
 
-        fr->analyzed = st_res.finished;
+        fr->analyzed = false;
         if (st_res.finished)
         {
             fr->report_kind = MediaConchLib::report_MediaConch;
             if (st_res.tool)
                 fr->report_kind = *st_res.tool;
-
-            std::vector<size_t> policies_ids;
-            std::vector<std::string> policies_contents;
-            std::map<std::string, std::string> options;
-            std::vector<MediaConchLib::Checker_ValidateRes*> res;
-
-            if (mainwindow->validate((MediaConchLib::report)fr->report_kind, files[i],
-                policies_ids, policies_contents, options, res, err) < 0)
-            {
-                mainwindow->set_str_msg_to_status_bar(err);
-                continue;
-            }
-            else if (!res.size())
-            {
-                mainwindow->set_str_msg_to_status_bar("Internal error: Validate result is not correct.");
-                continue;
-            }
-            fr->implementation_valid = res[0]->valid;
-
-            for (size_t j = 0; j < res.size(); ++j)
-                delete res[j];
-            res.clear();
-
-            if (fr->policy >= 0)
-            {
-                policies_ids.push_back(fr->policy);
-
-                if (mainwindow->validate(MediaConchLib::report_Max, files[i],
-                    policies_ids, policies_contents, options, res, err) < 0)
-                    continue;
-
-                if (!res.size())
-                    continue;
-
-                fr->policy_valid = res[0]->valid;
-                for (size_t j = 0; j < res.size(); ++j)
-                    delete res[j];
-                res.clear();
-            }
+            validator->add_file_to_validation(files[i], fr);
         }
         else
         {
@@ -556,6 +676,26 @@ void WorkerFiles::remove_file_registered_from_file(const std::string& file)
     to_delete_files_mutex.lock();
     to_delete_files[file] = fr;
     to_delete_files_mutex.unlock();
+}
+
+//---------------------------------------------------------------------------
+void WorkerFiles::update_validate(const std::string& file, FileRegistered* fr)
+{
+    working_files_mutex.lock();
+    std::map<std::string, FileRegistered*>::iterator it = working_files.find(file);
+    if (it != working_files.end() && it->second)
+        delete working_files[file];
+
+    working_files[file] = new FileRegistered(*fr);
+    working_files_mutex.unlock();
+
+    to_update_files_mutex.lock();
+    it = to_update_files.find(file);
+    if (it != to_update_files.end() && it->second)
+        delete to_update_files[file];
+
+    to_update_files[file] = new FileRegistered(*fr);
+    to_update_files_mutex.unlock();
 }
 
 //---------------------------------------------------------------------------
