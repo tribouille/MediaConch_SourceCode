@@ -1270,6 +1270,22 @@ int MainWindow::validate(MediaConchLib::report report, const std::string& file,
 }
 
 //---------------------------------------------------------------------------
+int MainWindow::validate(MediaConchLib::report report, long file_id,
+                         const std::vector<size_t>& policies_ids,
+                         const std::vector<std::string>& policies_contents,
+                         const std::map<std::string, std::string>& options,
+                         std::vector<MediaConchLib::Checker_ValidateRes*>& result, std::string& err)
+{
+    if (file_id < 0)
+        return -1;
+
+    std::vector<long> files_id;
+    files_id.push_back(file_id);
+
+    return MCL.checker_validate(-1, report, files_id, policies_ids, policies_contents, options, result, err);
+}
+
+//---------------------------------------------------------------------------
 int MainWindow::validate_policy(long file_id, size_t policy_id,
                                 std::vector<MediaConchLib::Checker_ValidateRes*>& result, std::string& err)
 {

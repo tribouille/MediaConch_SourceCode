@@ -12,14 +12,50 @@
 #include <string>
 #include <QThread>
 #include <QMutex>
+#include <QMetaType>
 
 class QTimer;
+
+
 
 namespace MediaConch {
 
 class FileRegistered;
 class MainWindow;
 class DatabaseUi;
+
+class WorkerFiles;
+
+class WorkerFilesValidate : public QThread
+{
+    Q_OBJECT
+
+public:
+    explicit WorkerFilesValidate(MainWindow* m, WorkerFiles* w, const std::string& f, FileRegistered* r);
+    virtual ~WorkerFilesValidate();
+
+    // Thread
+    void run();
+    bool stop();
+    void validate(std::string& err);
+
+    bool is_running;
+
+
+    private Q_SLOTS:
+        void plop();
+
+private:
+    MainWindow     *mainwindow;
+    WorkerFiles    *worker;
+    QTimer         *timer;
+    std::string     file;
+    FileRegistered *fr;
+
+    bool            flag_start;
+    bool            flag_kill;
+    QMutex          mut;
+};
 
 class WorkerFiles : public QThread
 {
@@ -47,6 +83,8 @@ public:
     long get_id_from_registered_file(const std::string& file);
     std::string get_filename_from_registered_file_id(long file_id);
     void update_policy_of_file_registered_from_file(long file_id, int policy);
+    void update_validate_of_registered_file(const std::string& file, FileRegistered* fr, const std::string& err);
+    void emit_signal_validate_end(const std::string&);
 
 private:
     void add_registered_file_to_db(const FileRegistered* file);
@@ -57,35 +95,48 @@ private:
     void remove_registered_file_from_db(const FileRegistered* file);
     void remove_registered_files_from_db(const std::vector<FileRegistered*>& files);
     void remove_all_registered_file_from_db();
+    void current_decrease();
 
     void update_unfinished_files();
     void update_add_files_registered();
     void update_delete_files_registered();
     void update_update_files_registered();
+    void update_validate_files_registered();
+
+Q_SIGNALS:
+    void validate_finished(const std::string&);
 
 private Q_SLOTS:
     void update_files_registered();
+    void remove_validate_thread(const std::string&);
 
 private:
-    MainWindow                             *mainwindow;
-    DatabaseUi                             *db;
-    QTimer                                 *timer;
-    size_t                                  file_index;
+    MainWindow                                  *mainwindow;
+    DatabaseUi                                  *db;
+    QTimer                                      *timer;
+    size_t                                       file_index;
 
-    std::map<std::string, FileRegistered*>  working_files;
-    QMutex                                  working_files_mutex;
+    std::map<std::string, FileRegistered*>       working_files;
+    QMutex                                       working_files_mutex;
 
-    std::map<std::string, FileRegistered*>  to_delete_files;
-    QMutex                                  to_delete_files_mutex;
+    std::map<std::string, FileRegistered*>       to_delete_files;
+    QMutex                                       to_delete_files_mutex;
 
-    std::map<std::string, FileRegistered*>  to_add_files;
-    QMutex                                  to_add_files_mutex;
+    std::map<std::string, FileRegistered*>       to_add_files;
+    QMutex                                       to_add_files_mutex;
 
-    std::map<std::string, FileRegistered*>  to_update_files;
-    QMutex                                  to_update_files_mutex;
+    std::map<std::string, FileRegistered*>       to_update_files;
+    QMutex                                       to_update_files_mutex;
 
-    std::vector<std::string>                unfinished_files;
-    QMutex                                  unfinished_files_mutex;
+    std::vector<std::string>                     unfinished_files;
+    QMutex                                       unfinished_files_mutex;
+
+    std::map<std::string, WorkerFilesValidate*>  to_validate_files;
+    QMutex                                       to_validate_files_mutex;
+
+    unsigned                                     max_threads;
+    unsigned                                     current;
+    QMutex                                       current_mutex;
 };
 
 }

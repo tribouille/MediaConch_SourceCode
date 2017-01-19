@@ -13,17 +13,139 @@
 #include <QString>
 #include <QDir>
 #include <QTimer>
+#include <pthread.h>
 
 namespace MediaConch {
 
 //***************************************************************************
-// Constructor / Desructor
+// Constructor / Desructor WorkerFilesValidate
+//***************************************************************************
+
+//---------------------------------------------------------------------------
+WorkerFilesValidate::WorkerFilesValidate(MainWindow* m, WorkerFiles* w, const std::string& f, FileRegistered* r)
+                    : QThread(), is_running(false), mainwindow(m), worker(w), file(f), fr(r)
+{
+    flag_start = true;
+    flag_kill = false;
+    connect(this, SIGNAL(terminated()), this, SLOT(plop()), Qt::DirectConnection);
+}
+
+//---------------------------------------------------------------------------
+WorkerFilesValidate::~WorkerFilesValidate()
+{
+}
+
+//---------------------------------------------------------------------------
+void WorkerFilesValidate::plop()
+{
+    printf("is terminated\n");
+}
+
+//---------------------------------------------------------------------------
+bool WorkerFilesValidate::stop()
+{
+    mut.lock();
+    if (flag_start)
+        flag_kill = true;
+    mut.unlock();
+
+    printf("lock:%d\n", flag_kill);
+    if (flag_kill)
+        terminate();
+
+    bool w = wait(1000);
+
+    printf("avant wait:%d\n", isFinished());
+
+    return !flag_kill;
+}
+
+//---------------------------------------------------------------------------
+void WorkerFilesValidate::run()
+{
+    pthread_setcanceltype(PTHREAD_CANCEL_ASYNCHRONOUS, NULL);
+    is_running = true;
+
+    printf("run lock 1\n");
+    mut.lock();
+    if (flag_kill)
+    {
+        printf("run unlock 1\n");
+        mut.unlock();
+        return;
+    }
+
+    flag_start = true;
+    printf("run unlock 1\n");
+    mut.unlock();
+
+    std::string err;
+    validate(err);
+
+    printf("run lock 2\n");
+    mut.lock();
+    if (flag_kill)
+    {
+        printf("run unlock 2\n");
+        mut.unlock();
+        return;
+    }
+
+    flag_start = false;
+        printf("run unlock 2\n");
+    mut.unlock();
+
+    fr->analyzed = true;
+    worker->update_validate_of_registered_file(file, fr, err);
+    worker->emit_signal_validate_end(file);
+}
+
+void WorkerFilesValidate::validate(std::string& err)
+{
+    std::vector<size_t> policies_ids;
+    std::vector<std::string> policies_contents;
+    std::map<std::string, std::string> options;
+    std::vector<MediaConchLib::Checker_ValidateRes*> res;
+
+    if (mainwindow->validate((MediaConchLib::report)fr->report_kind, fr->file_id,
+                             policies_ids, policies_contents, options, res, err) < 0)
+        mainwindow->set_str_msg_to_status_bar(err);
+    else if (!res.size())
+        err = "Internal error: Validate result is not correct.";
+    else
+        fr->implementation_valid = res[0]->valid;
+
+    for (size_t j = 0; j < res.size(); ++j)
+        delete res[j];
+    res.clear();
+
+    if (fr->policy >= 0)
+    {
+        policies_ids.push_back(fr->policy);
+
+        if (mainwindow->validate(MediaConchLib::report_Max, fr->file_id,
+                                 policies_ids, policies_contents, options, res, err) < 0)
+            mainwindow->set_str_msg_to_status_bar(err);
+        else if (!res.size())
+            err = "Internal error: Validate result is not correct.";
+        else
+            fr->policy_valid = res[0]->valid;
+        for (size_t j = 0; j < res.size(); ++j)
+            delete res[j];
+        res.clear();
+    }
+}
+
+//***************************************************************************
+// Constructor / Desructor WorkerFiles
 //***************************************************************************
 
 //---------------------------------------------------------------------------
 WorkerFiles::WorkerFiles(MainWindow* m) : QThread(), mainwindow(m), db(NULL), timer(NULL),
-                                          file_index(0)
+                                          file_index(0), max_threads(1), current(0)
 {
+    qRegisterMetaType<std::string>("std::string");
+    connect(this, SIGNAL(validate_finished(std::string)), this, SLOT(remove_validate_thread(std::string)));
 }
 
 //---------------------------------------------------------------------------
@@ -35,6 +157,19 @@ WorkerFiles::~WorkerFiles()
         delete timer;
         timer = NULL;
     }
+
+    to_validate_files_mutex.lock();
+    std::map<std::string, WorkerFilesValidate*>::iterator it = to_validate_files.begin();
+    for (; it != to_validate_files.end(); ++it)
+    {
+        if (it->second)
+        {
+            it->second->stop();
+            delete it->second;
+        }
+    }
+    to_validate_files.clear();
+    to_validate_files_mutex.unlock();
 }
 
 //---------------------------------------------------------------------------
@@ -302,6 +437,71 @@ void WorkerFiles::update_policy_of_file_registered_from_file(long file_id, int p
 }
 
 //---------------------------------------------------------------------------
+void WorkerFiles::update_validate_of_registered_file(const std::string& file, FileRegistered* fr, const std::string& err)
+{
+    if (err.size())
+        mainwindow->set_str_msg_to_status_bar(err);
+
+    to_update_files_mutex.lock();
+    if (to_update_files.find(file) != to_update_files.end())
+    {
+        delete to_update_files[file];
+        to_update_files[file] = new FileRegistered(*fr);
+    }
+    else
+        to_update_files[file] = new FileRegistered(*fr);
+    to_update_files_mutex.unlock();
+
+    working_files_mutex.lock();
+    if (working_files.find(file) != working_files.end())
+    {
+        delete working_files[file];
+        working_files[file] = fr;
+    }
+    else
+        delete fr;
+    working_files_mutex.unlock();
+}
+
+//---------------------------------------------------------------------------
+void WorkerFiles::emit_signal_validate_end(const std::string& file)
+{
+    printf("emit signal:%s\n", file.c_str());
+    Q_EMIT validate_finished(file);
+}
+
+//---------------------------------------------------------------------------
+void WorkerFiles::remove_validate_thread(const std::string& file)
+{
+    printf("a\n");
+    to_validate_files_mutex.lock();
+    printf("b\n");
+    std::map<std::string, WorkerFilesValidate*>::iterator it = to_validate_files.find(file);
+    if (it != to_validate_files.end())
+    {
+        if (it->second)
+        {
+            if (!it->second->stop())
+                current_decrease();
+            delete it->second;
+        }
+        to_validate_files.erase(it);
+    }
+    to_validate_files_mutex.unlock();
+    current_decrease();
+
+    update_validate_files_registered();
+}
+
+//---------------------------------------------------------------------------
+void WorkerFiles::current_decrease()
+{
+    current_mutex.lock();
+    --current;
+    current_mutex.unlock();
+}
+
+//---------------------------------------------------------------------------
 void WorkerFiles::clear_files()
 {
     working_files_mutex.lock();
@@ -332,6 +532,7 @@ void WorkerFiles::update_files_registered()
     update_add_files_registered();
     update_delete_files_registered();
     update_update_files_registered();
+    update_validate_files_registered();
 
     timer = new QTimer(0);
     timer->moveToThread(this);
@@ -394,18 +595,49 @@ void WorkerFiles::update_update_files_registered()
 }
 
 //---------------------------------------------------------------------------
+void WorkerFiles::update_validate_files_registered()
+{
+    to_validate_files_mutex.lock();
+    if (!to_validate_files.size())
+    {
+        to_validate_files_mutex.unlock();
+        return;
+    }
+
+    current_mutex.lock();
+    printf("max=%u, current:%u\n", max_threads, current);
+    if (current >= max_threads)
+    {
+        current_mutex.unlock();
+        to_validate_files_mutex.unlock();
+        return;
+    }
+
+    std::map<std::string, WorkerFilesValidate*>::iterator it = to_validate_files.begin();
+    for (; it != to_validate_files.end(); ++it)
+    {
+        if (it->second && !it->second->is_running)
+        {
+            it->second->start();
+            printf("size=%lu, current:%u\n", to_validate_files.size(), current);
+            ++current;
+            break;
+        }
+    }
+    current_mutex.unlock();
+    to_validate_files_mutex.unlock();
+}
+
+//---------------------------------------------------------------------------
 void WorkerFiles::update_delete_files_registered()
 {
     std::vector<FileRegistered*> vec;
 
     to_delete_files_mutex.lock();
-    if (to_delete_files.size())
-    {
-        std::map<std::string, FileRegistered*>::iterator it = to_delete_files.begin();
-        for (; it != to_delete_files.end(); ++it)
-            vec.push_back(it->second);
-        to_delete_files.clear();
-    }
+    std::map<std::string, FileRegistered*>::iterator it = to_delete_files.begin();
+    for (; it != to_delete_files.end(); ++it)
+        vec.push_back(it->second);
+    to_delete_files.clear();
     to_delete_files_mutex.unlock();
 
     if (!vec.size())
@@ -444,54 +676,33 @@ void WorkerFiles::update_unfinished_files()
             continue;
         }
 
-        fr->analyzed = st_res.finished;
         if (st_res.finished)
         {
             fr->report_kind = MediaConchLib::report_MediaConch;
             if (st_res.tool)
                 fr->report_kind = *st_res.tool;
 
-            std::vector<size_t> policies_ids;
-            std::vector<std::string> policies_contents;
-            std::map<std::string, std::string> options;
-            std::vector<MediaConchLib::Checker_ValidateRes*> res;
-
-            if (mainwindow->validate((MediaConchLib::report)fr->report_kind, files[i],
-                policies_ids, policies_contents, options, res, err) < 0)
+            to_validate_files_mutex.lock();
+            std::map<std::string, WorkerFilesValidate*>::iterator it = to_validate_files.find(files[i]);
+            if (it != to_validate_files.end())
             {
-                mainwindow->set_str_msg_to_status_bar(err);
-                continue;
+                printf("Existe deja\n");
+                if (it->second)
+                {
+                    if (!it->second->stop())
+                        current_decrease();
+                    delete it->second;
+                }
+                to_validate_files.erase(it);
             }
-            else if (!res.size())
-            {
-                mainwindow->set_str_msg_to_status_bar("Internal error: Validate result is not correct.");
-                continue;
-            }
-            fr->implementation_valid = res[0]->valid;
 
-            for (size_t j = 0; j < res.size(); ++j)
-                delete res[j];
-            res.clear();
-
-            if (fr->policy >= 0)
-            {
-                policies_ids.push_back(fr->policy);
-
-                if (mainwindow->validate(MediaConchLib::report_Max, files[i],
-                    policies_ids, policies_contents, options, res, err) < 0)
-                    continue;
-
-                if (!res.size())
-                    continue;
-
-                fr->policy_valid = res[0]->valid;
-                for (size_t j = 0; j < res.size(); ++j)
-                    delete res[j];
-                res.clear();
-            }
+            WorkerFilesValidate* v = new WorkerFilesValidate(mainwindow, this, files[i], new FileRegistered(*fr));
+            to_validate_files[files[i]] = v;
+            to_validate_files_mutex.unlock();
         }
         else
         {
+            fr->analyzed = false;
             fr->analyze_percent = 0.0;
             if (st_res.percent)
                 fr->analyze_percent = *st_res.percent;
@@ -552,6 +763,23 @@ void WorkerFiles::remove_file_registered_from_file(const std::string& file)
     working_files[file] = NULL;
     working_files.erase(it);
     working_files_mutex.unlock();
+
+    //stop to try to validate
+    to_validate_files_mutex.lock();
+    std::map<std::string, WorkerFilesValidate*>::iterator it_val = to_validate_files.find(file);
+    if (it_val != to_validate_files.end() && it_val->second)
+    {
+        if (!it_val->second->stop())
+            current_decrease();
+        printf("c\n");
+        if (it_val->second->isFinished())
+            delete it_val->second;
+        printf("d\n");
+        it_val->second = NULL;
+
+        to_validate_files.erase(it_val);
+    }
+    to_validate_files_mutex.unlock();
 
     to_delete_files_mutex.lock();
     to_delete_files[file] = fr;

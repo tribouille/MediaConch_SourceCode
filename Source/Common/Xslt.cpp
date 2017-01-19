@@ -156,7 +156,9 @@ int Xslt::validate_xml(const std::string& xml, bool)
         params[i] = NULL;
     }
 
+    printf("Start XSL\n");
     xmlDocPtr res = xsltApplyStylesheet(xslt_ctx, doc, params);
+    printf("Finish XSL\n");
 
     if (params)
         delete [] params;

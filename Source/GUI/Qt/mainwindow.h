@@ -92,6 +92,11 @@ public:
                                          const std::vector<std::string>& policies_contents,
                                          const std::map<std::string, std::string>& options,
                                          std::vector<MediaConchLib::Checker_ValidateRes*>& result, std::string& err);
+    int                         validate(MediaConchLib::report report, long file_id,
+                                         const std::vector<size_t>& policies_ids,
+                                         const std::vector<std::string>& policies_contents,
+                                         const std::map<std::string, std::string>& options,
+                                         std::vector<MediaConchLib::Checker_ValidateRes*>& result, std::string& err);
     int                         validate_policy(long file_id, size_t policy_id,
                                                 std::vector<MediaConchLib::Checker_ValidateRes*>& result, std::string& err);
 
