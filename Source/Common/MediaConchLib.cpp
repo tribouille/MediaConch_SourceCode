@@ -143,15 +143,15 @@ bool MediaConchLib::ReportAndFormatCombination_IsValid(const std::vector<std::st
         return false;
     }
 
-    // Forcing some formats
-    if (Format == MediaConchLib::format_Text && !display.empty())
-        Format = format_Xml; //Forcing Text (default) to XML
-
-    if (Format != MediaConchLib::format_Xml && !display.empty())
+    if (Format != MediaConchLib::format_None && !display.empty())
     {
         reason = "If a display is used, no other output format can be used";
         return false;
     }
+
+    // Forcing some formats
+    if (Format == MediaConchLib::format_None && display.empty())
+        Format = MediaConchLib::format_Xml; //Forcing XML when no format or display
 
     if (reports.count() > 1 && Format == MediaConchLib::format_Xml)
         Format = MediaConchLib::format_MaXml;

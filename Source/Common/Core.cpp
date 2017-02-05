@@ -617,6 +617,7 @@ int Core::checker_get_report(int user, const std::bitset<MediaConchLib::report_M
                            policies_ids.size() ? &policies_ids : NULL,
                            policies_contents.size() ? &policies_contents : NULL) < 0)
             return -1;
+
         if (f == MediaConchLib::format_Text)
             transform_with_xslt_text_memory(result->report, result->report);
         else if (f == MediaConchLib::format_Html)

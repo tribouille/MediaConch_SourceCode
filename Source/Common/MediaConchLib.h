@@ -61,6 +61,7 @@ public:
 
     enum format
     {
+        format_None = -1,
         format_Text = 0,
         format_Xml,         // XML corresponding to only one of MediaConch, MediaInfo, MediaTrace
         format_MaXml,       // MAXML, can contain one or more of MediaConch, MediaInfo, MediaTrace

@@ -42,7 +42,7 @@ namespace MediaConch
                  watch_folder_recursive(true), create_policy_mode(false), file_information(false),
                  plugins_list_mode(false), list_watch_folders_mode(false), no_needs_files_mode(false)
     {
-        format = MediaConchLib::format_Simple;
+        format = MediaConchLib::format_None;
     }
 
     //--------------------------------------------------------------------------
@@ -72,6 +72,9 @@ namespace MediaConch
             // If no Implementation Schema registered, use one by default
             if (!MCL.get_implementation_schema_file().length())
                 MCL.create_default_implementation_schema();
+
+            if (format == MediaConchLib::format_None && !display_file.size())
+                format = MediaConchLib::format_Simple;
 
             if (!MCL.ReportAndFormatCombination_IsValid(files, report_set, display_file,
                                                         format, err))
