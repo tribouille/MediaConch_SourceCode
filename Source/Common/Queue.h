@@ -47,13 +47,12 @@ namespace MediaConch
     public:
         QueueElement(Scheduler *s);
         virtual ~QueueElement();
-        int                                user;
-        int                                id;
         std::string                        filename;
         std::string                        options_str;
         std::vector<std::pair<std::string, std::string> > options;
         std::vector<std::string>           plugins;
         long                               file_id;
+        int                                user;
         bool                               mil_analyze;
 
         void                               Entry();
@@ -87,12 +86,11 @@ namespace MediaConch
         Queue(Scheduler *s) : scheduler(s){}
         ~Queue();
 
-        int add_element(QueuePriority priority, int id, int user, const std::string& filename, long file_id,
+        int add_element(QueuePriority priority, int user, const std::string& filename, long file_id,
                         const std::vector<std::pair<std::string,std::string> >& options,
                         const std::vector<std::string>& plugins, bool mil_analyze);
         long has_element(int user, const std::string& filename);
         int  has_id(int user, long file_id);
-        int remove_element(int id);
         int remove_elements(int user, const std::string& filename);
         void clear();
 

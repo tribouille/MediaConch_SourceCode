@@ -67,11 +67,9 @@ namespace MediaConch {
                                         const std::vector<std::pair<std::string,std::string> >& options,
                                         const std::vector<std::string>& plugins, bool mil_analyze)
     {
-        static int index = 0;
-
-        queue->add_element(PRIORITY_NONE, index++, user, filename, file_id, options, plugins, mil_analyze);
+        queue->add_element(PRIORITY_NONE, user, filename, file_id, options, plugins, mil_analyze);
         run_element();
-        return index - 1;
+        return 0;
     }
 
     //---------------------------------------------------------------------------
