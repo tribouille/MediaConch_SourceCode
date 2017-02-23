@@ -272,7 +272,7 @@ namespace MediaConch
         {
             std::string error;
             if (mainwindow->add_file_to_list(list[i].fileName(), list[i].absolutePath(), policy,
-                                             display, verbosity, fixer, false, error))
+                                             display, verbosity, fixer, false, error) < 0)
                 ret += QString("%1\n").arg(QString().fromUtf8(error.c_str(), error.size()));
         }
         file_selector.clear();

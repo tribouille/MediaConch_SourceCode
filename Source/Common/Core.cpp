@@ -391,8 +391,8 @@ long Core::checker_analyze(int user, const std::string& file, bool& registered,
                            bool force_analyze, bool mil_analyze)
 {
     long id = -1;
-    registered = false;
     bool analyzed = false;
+    registered = false;
 
     std::string options_str = serialize_string_from_options_vec(options);
     id = file_is_registered_and_analyzed(user, file, analyzed, options_str, err);

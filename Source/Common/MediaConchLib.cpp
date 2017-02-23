@@ -258,7 +258,7 @@ int MediaConchLib::checker_analyze(int user, const std::vector<std::string>& fil
         files_id.push_back(file_id);
     }
 
-    return errorHttp_NONE;
+    return 0;
 }
 
 //---------------------------------------------------------------------------
@@ -267,7 +267,10 @@ int MediaConchLib::checker_analyze(int user, const std::string& file, const std:
                                    bool& registered, long& file_id, std::string& error, bool force_analyze, bool mil_analyze)
 {
     if (!file.length())
-        return errorHttp_INVALID_DATA;
+    {
+        error = "File is empty.";
+        return 0;
+    }
 
     if (use_daemon)
         return daemon_client->checker_analyze(user, file, plugins, options, registered, force_analyze, mil_analyze, file_id, error);

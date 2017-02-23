@@ -102,9 +102,7 @@ namespace MediaConch {
 
         if (!MI)
         {
-            CS.Enter();
             remove_element(el);
-            CS.Leave();
             run_element();
             return;
         }
@@ -112,10 +110,8 @@ namespace MediaConch {
         if (another_work_to_do(el, MI) <= 0)
             return;
 
-        CS.Enter();
         core->register_reports_to_database(el->user, el->file_id, MI);
         remove_element(el);
-        CS.Leave();
         run_element();
     }
 
@@ -228,10 +224,8 @@ namespace MediaConch {
         const std::string& report = p->get_report();
         MediaConchLib::report report_kind = ((PluginFormat*)p)->get_report_kind();
 
-        CS.Enter();
         core->register_reports_to_database(el->user, el->file_id, report, report_kind, "", MI);
         remove_element(el);
-        CS.Leave();
         run_element();
 
         delete p;
@@ -241,9 +235,11 @@ namespace MediaConch {
 
     void Scheduler::remove_element(QueueElement *el)
     {
+        CS.Enter();
         std::map<QueueElement*, QueueElement*>::iterator it = working.find(el);
         if (it != working.end())
             working.erase(it);
+        CS.Leave();
     }
 
     int Scheduler::execute_pre_hook_plugins(QueueElement *el, std::string& err)
