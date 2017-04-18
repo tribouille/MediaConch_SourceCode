@@ -236,6 +236,7 @@ int Parse(MediaConch::CLI* cli, std::string& argument)
     OPTION("--watchfolder-user",                            WatchFolderUser)
     OPTION("--watchfolder",                                 WatchFolder)
     OPTION("--user",                                        User)
+    OPTION("--qctools",                                     QCTools)
     //Default
     OPTION("--",                                            Default)
     else
@@ -666,6 +667,26 @@ CL_OPTION(User)
     std::string user;
     user.assign(argument, egal_pos + 1 , std::string::npos);
     cli->set_user_to_use(user);
+
+    return CLI_RETURN_NONE;
+}
+
+//---------------------------------------------------------------------------
+CL_OPTION(QCTools)
+{
+    //Form : --QCTools --QCTools=file
+    size_t egal_pos = argument.find('=');
+    if (egal_pos == std::string::npos)
+    {
+        cli->add_qctools_filename();
+    }
+    else
+    {
+        //file XML
+        std::string filename;
+        filename.assign(argument, egal_pos + 1 , std::string::npos);
+        cli->add_qctools_filename(filename);
+    }
 
     return CLI_RETURN_NONE;
 }

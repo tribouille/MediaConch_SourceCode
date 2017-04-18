@@ -71,6 +71,9 @@ SOURCES          += ../../Source/Common/MediaConchLib.cpp \
                     ../../Source/Common/NoDatabaseReport.cpp \
                     ../../Source/Common/SQLLite.cpp \
                     ../../Source/Common/SQLLiteReport.cpp \
+                    ../../Source/Common/DatabaseStats.cpp \
+                    ../../Source/Common/NoDatabaseStats.cpp \
+                    ../../Source/Common/SQLLiteStats.cpp \
                     ../../Source/Common/Json.cpp \
                     ../../Source/Common/Configuration.cpp \
                     ../../Source/Common/REST_API.cpp \
@@ -88,6 +91,9 @@ SOURCES          += ../../Source/Common/MediaConchLib.cpp \
                     ../../Source/Common/DpfManager.cpp \
                     ../../Source/Common/PluginPreHook.cpp \
                     ../../Source/Common/PluginFileLog.cpp \
+                    ../../Source/Common/PluginStats.cpp \
+                    ../../Source/Common/PluginStatsFrameFFmpeg.cpp \
+                    ../../Source/Common/StatsFrame.cpp \
                     ../../Source/Common/WatchFoldersManager.cpp \
                     ../../Source/Common/WatchFolder.cpp \
                     ../../Source/GUI/Qt/main.cpp \
@@ -310,6 +316,14 @@ contains(NO_LIBEVENT, yes|1) {
         PKGCONFIG        += libevent
         message("libevent    : system")
     }
+}
+
+contains(HAVE_FFMPEG, yes|1) {
+    DEFINES          += HAVE_FFMPEG
+    PKGCONFIG        += libavutil libavformat libavcodec libavfilter libavdevice
+    message("ffmpeg  : system")
+} else {
+    message("ffmpeg  : no")
 }
 
 macx:QMAKE_MACOSX_DEPLOYMENT_TARGET = 10.5

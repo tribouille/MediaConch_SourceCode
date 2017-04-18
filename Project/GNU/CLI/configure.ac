@@ -56,6 +56,7 @@ AC_ARG_WITH(libmediainfo-name,  AC_HELP_STRING([--with-libmediainfo-name],  [For
 AC_ARG_WITH(sqlite,             AC_HELP_STRING([--with-sqlite],             [Enable SQLite DB]),                          , with_sqlite=yes)
 AC_ARG_WITH(jansson,            AC_HELP_STRING([--with-jansson],            [Enable Jansson Library]),                    , with_jansson=yes)
 AC_ARG_WITH(libevent,           AC_HELP_STRING([--with-libevent],           [Enable Libevent]),                           , with_libevent=yes)
+AC_ARG_WITH(ffmpeg,             AC_HELP_STRING([--with-ffmpeg],             [Enable FFmpeg]),                             , with_ffmpeg=no)
 
 dnl -------------------------------------------------------------------------
 dnl External options
@@ -399,6 +400,106 @@ else
     with_libevent="No"
 fi
 
+dnl -------------------------------------------------------------------------
+dnl libavutil
+dnl
+if test "$with_ffmpeg" = "yes"; then
+    if pkg-config --exists libavutil; then
+        CXXFLAGS="$CXXFLAGS -DHAVE_FFMPEG $(pkg-config --cflags libavutil)"
+        if test "$enable_staticlibs" = "yes"; then
+            with_libavutil="system (static)"
+            LIBS="$LIBS $(pkg-config --static --libs libavutil)"
+        else
+            with_libavutil="system"
+            LIBS="$LIBS $(pkg-config --libs libavutil)"
+        fi
+    else
+        with_libavutil="No"
+    fi
+else
+    with_libavutil="No"
+fi
+
+dnl -------------------------------------------------------------------------
+dnl libavformat
+dnl
+if test "$with_ffmpeg" = "yes"; then
+    if pkg-config --exists libavformat; then
+        CXXFLAGS="$CXXFLAGS -DHAVE_FFMPEG $(pkg-config --cflags libavformat) -D__STDC_CONSTANT_MACROS"
+        if test "$enable_staticlibs" = "yes"; then
+            with_libavformat="system (static)"
+            LIBS="$LIBS $(pkg-config --static --libs libavformat)"
+        else
+            with_libavformat="system"
+            LIBS="$LIBS $(pkg-config --libs libavformat)"
+        fi
+    else
+        with_libavformat="No"
+    fi
+else
+    with_libavformat="No"
+fi
+
+dnl -------------------------------------------------------------------------
+dnl libavcodec
+dnl
+if test "$with_ffmpeg" = "yes"; then
+    if pkg-config --exists libavcodec; then
+        CXXFLAGS="$CXXFLAGS -DHAVE_FFMPEG $(pkg-config --cflags libavcodec)"
+        if test "$enable_staticlibs" = "yes"; then
+            with_libavcodec="system (static)"
+            LIBS="$LIBS $(pkg-config --static --libs libavcodec)"
+        else
+            with_libavcodec="system"
+            LIBS="$LIBS $(pkg-config --libs libavcodec)"
+        fi
+    else
+        with_libavcodec="No"
+    fi
+else
+    with_libavcodec="No"
+fi
+
+dnl -------------------------------------------------------------------------
+dnl libavdevice
+dnl
+if test "$with_ffmpeg" = "yes"; then
+    if pkg-config --exists libavdevice; then
+        CXXFLAGS="$CXXFLAGS -DHAVE_FFMPEG $(pkg-config --cflags libavdevice)"
+        if test "$enable_staticlibs" = "yes"; then
+            with_libavdevice="system (static)"
+            LIBS="$LIBS $(pkg-config --static --libs libavdevice)"
+        else
+            with_libavdevice="system"
+            LIBS="$LIBS $(pkg-config --libs libavdevice)"
+        fi
+    else
+        with_libavdevice="No"
+    fi
+else
+    with_libavdevice="No"
+fi
+
+dnl -------------------------------------------------------------------------
+dnl libavfilter
+dnl
+if test "$with_ffmpeg" = "yes"; then
+    if pkg-config --exists libavfilter; then
+        CXXFLAGS="$CXXFLAGS -DHAVE_FFMPEG $(pkg-config --cflags libavfilter) -D__STDC_CONSTANT_MACROS"
+        if test "$enable_staticlibs" = "yes"; then
+            with_libavfilter="system (static)"
+            LIBS="$LIBS $(pkg-config --static --libs libavfilter)"
+        else
+            with_libavfilter="system"
+            LIBS="$LIBS $(pkg-config --libs libavfilter)"
+        fi
+    else
+        with_libavfilter="No"
+    fi
+else
+    with_libavfilter="No"
+fi
+
 dnl #########################################################################
 dnl ### Compiler specific
 dnl #########################################################################
@@ -488,6 +589,11 @@ echo "  Using libxml2?                                          $with_libxml2"
 echo "  Using libxslt?                                          $with_libxslt"
 echo "  Using libzen?                                           $with_zenlib"
 echo "  Using libmediainfo?                                     $with_mediainfolib"
+echo "  Using libavutil?                                        $with_libavutil"
+echo "  Using libavformat?                                      $with_libavformat"
+echo "  Using libavcodec?                                       $with_libavcodec"
+echo "  Using libavdevice?                                      $with_libavdevice"
+echo "  Using libavfilter?                                      $with_libavfilter"
 echo ""
 echo "  CXXFLAGS: $CXXFLAGS"
 echo "  LIBS: $LIBS"

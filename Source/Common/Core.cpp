@@ -15,6 +15,8 @@
 #include "Common/Schema.h"
 #include "NoDatabaseReport.h"
 #include "SQLLiteReport.h"
+#include "NoDatabaseStats.h"
+#include "SQLLiteStats.h"
 #include "Configuration.h"
 #include "Json.h"
 #include "PluginLog.h"
@@ -23,6 +25,7 @@
 #include "Common/PluginsManager.h"
 #include "Common/PluginsConfig.h"
 #include "Common/Plugin.h"
+#include "Common/StatsFrame.h"
 #if defined(_WIN32) || defined(WIN32)
 #include <Shlobj.h>
 #endif //defined(_WIN32) || defined(WIN32)
@@ -59,6 +62,7 @@
 //---------------------------------------------------------------------------
 const MediaInfoNameSpace::Char* MEDIAINFO_TITLE=__T("MediaArea.net/MediaConch");
 const std::string MediaConch::Core::database_name = "MediaConch.db";
+const std::string MediaConch::Core::database_stats_name = "MediaConchStats.db";
 
 //---------------------------------------------------------------------------
 namespace MediaConch {
@@ -74,6 +78,7 @@ Core::Core() : policies(this), reports(this)
 
     config = NULL;
     db = NULL;
+    db_stats = NULL;
     scheduler = new Scheduler(this);
     plugins_manager = new PluginsManager(this);
     watch_folders_manager = new WatchFoldersManager(this);
@@ -91,6 +96,11 @@ Core::~Core()
         delete plugins_manager;
     if (db)
         delete db;
+    if (db_stats)
+    {
+        delete db_stats;
+        db_stats = NULL;
+    }
     delete MI;
     if (config)
         delete config;
@@ -172,6 +182,31 @@ void Core::load_database()
     {
         db = new NoDatabaseReport;
         db->init_report();
+    }
+}
+
+//---------------------------------------------------------------------------
+void Core::load_database_stats()
+{
+#ifdef HAVE_SQLITE
+    std::string db_path;
+    if (!config || config->get("SQLite_Stats_Path", db_path) < 0)
+        db_path = get_database_stats_path();
+
+    db_stats = new SQLLiteStats;
+
+    ((Database*)db_stats)->set_database_directory(db_path);
+    db_stats->set_database_filename(database_stats_name);
+    if (db_stats->init_stats() < 0)
+    {
+        delete db_stats;
+        db_stats = NULL;
+    }
+#endif
+    if (!db_stats)
+    {
+        db_stats = new NoDatabaseStats;
+        db_stats->init_stats();
     }
 }
 
@@ -287,6 +322,12 @@ const std::map<std::string, Plugin*>& Core::get_format_plugins() const
 const std::vector<Plugin*>& Core::get_pre_hook_plugins() const
 {
     return plugins_manager->get_pre_hook_plugins();
+}
+
+//---------------------------------------------------------------------------
+const std::map<std::string, Plugin*>& Core::get_stats_plugins() const
+{
+    return plugins_manager->get_stats_plugins();
 }
 
 //***************************************************************************
@@ -686,6 +727,74 @@ void Core::compress_report_copy(std::string& report, const char* src, size_t src
 }
 
 //---------------------------------------------------------------------------
+int Core::compress_buffer(ZenLib::int8u *src, size_t& src_len, ZenLib::int8u *dst, size_t& dst_len, MediaConchLib::compression& compress)
+{
+    if (compress == MediaConchLib::compression_ZLib)
+    {
+        uLongf d_len, s_len;
+
+        s_len = src_len;
+        d_len = s_len + sizeof(Bytef); // src_len + 1
+        dst = new ZenLib::int8u [d_len];
+
+        if (compress2((Bytef*)dst, &d_len, (const Bytef*)src, s_len, Z_BEST_COMPRESSION) != Z_OK)
+        {
+            //Fallback to no compression
+            compress = MediaConchLib::compression_None;
+            delete [] dst;
+            return -1;
+        }
+
+        src_len = s_len;
+        dst_len = d_len;
+        return 0;
+    }
+
+    return -1;
+}
+
+//---------------------------------------------------------------------------
+int Core::uncompress_buffer(const ZenLib::int8u *src, size_t src_len, ZenLib::int8u *dst, size_t& dst_len, size_t orig_len, MediaConchLib::compression& compress)
+{
+    switch (compress)
+    {
+        case MediaConchLib::compression_None:
+            break;
+        case MediaConchLib::compression_ZLib:
+            uLongf d_len, s_len;
+
+            s_len = src_len;
+            d_len = orig_len;
+
+            do
+            {
+                dst = new ZenLib::int8u[d_len + 1];
+
+                int ret = Z_OK;
+                if ((ret = uncompress((Bytef*)dst, &d_len, (const Bytef*)src, s_len / sizeof(Bytef))) != Z_OK)
+                {
+                    delete [] dst;
+                    if (ret == Z_BUF_ERROR)
+                    {
+                        d_len <<= 1;
+                        continue;
+                    }
+                    return -1;
+                }
+
+                dst_len = d_len / sizeof(Bytef);
+                break;
+            }
+            while (1);
+            break;
+
+        default:
+            break;
+    }
+    return 0;
+}
+
+//---------------------------------------------------------------------------
 int Core::uncompress_report(std::string& report, MediaConchLib::compression compress)
 {
     switch (compress)
@@ -929,6 +1038,27 @@ int Core::get_report_saved(int user, const std::vector<long>& files,
 }
 
 //---------------------------------------------------------------------------
+int Core::get_stats_saved(int user, long file_id, std::vector<MediaConchLib::StatsFrameMin*>& stats, std::string& err)
+{
+    if (!get_stats_db())
+    {
+        err = "The stats database is not correctly set.";
+        return -1;
+    }
+
+    db_stats_mutex.Enter();
+    if (get_stats_db()->get_stats(user, file_id, stats, err) < 0)
+    {
+        db_mutex.Leave();
+        return -1;
+    }
+
+    db_stats_mutex.Leave();
+
+    return 0;
+}
+
+//---------------------------------------------------------------------------
 long Core::file_is_registered_and_analyzed_in_db(int user, const std::string& filename, bool& analyzed,
                                                  const std::string& options, std::string& err)
 {
@@ -991,6 +1121,34 @@ int Core::implem_report_is_registered(int user, long file, const std::string& op
                                              MediaConchLib::format_Xml, options, registered, err);
     db_mutex.Leave();
     return ret;
+}
+
+//***************************************************************************
+// Stats Database access
+//***************************************************************************
+//---------------------------------------------------------------------------
+int Core::register_stats_to_db(long user_id, long file_id, const std::string& plugin,
+                               size_t stream_idx,
+                               const std::map<std::string, std::vector<double> >& stats,
+                               std::string& error)
+{
+    std::map<std::string, std::vector<double> >::const_iterator it = stats.begin();
+    //For each data name
+    for (; it != stats.end(); ++it)
+    {
+        MediaConchLib::StatsFrameMin sf;
+        sf.plugin = plugin;
+        sf.stream = stream_idx;
+        sf.name = it->first;
+        sf.stats = it->second;
+
+        db_stats_mutex.Enter();
+        int ret = get_stats_db()->register_stats(user_id, file_id, sf, error);
+        db_stats_mutex.Leave();
+        if (ret < 0)
+            return ret;
+    }
+    return 0;
 }
 
 //---------------------------------------------------------------------------
@@ -1362,6 +1520,18 @@ std::string Core::get_database_path()
 }
 
 //---------------------------------------------------------------------------
+std::string Core::get_database_stats_path()
+{
+    std::string database_path = get_local_data_path();
+
+    Ztring z_path = ZenLib::Ztring().From_UTF8(database_path);
+    char sep = get_path_separator(database_path);
+    if (!ZenLib::Dir::Exists(z_path))
+        database_path = std::string(".").append(1, sep);
+    return database_path;
+}
+
+//---------------------------------------------------------------------------
 std::string Core::get_config_file()
 {
     if (configuration_file.length())
@@ -1412,6 +1582,14 @@ DatabaseReport *Core::get_db()
     if (!db)
         load_database();
     return db;
+}
+
+//---------------------------------------------------------------------------
+DatabaseStats *Core::get_stats_db()
+{
+    if (!db_stats)
+        load_database_stats();
+    return db_stats;
 }
 
 //---------------------------------------------------------------------------

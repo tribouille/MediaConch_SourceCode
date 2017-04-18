@@ -110,6 +110,10 @@ int Help()
     TEXTOUT("--FileInformation, -fi");
     TEXTOUT("                 Print files information and quit");
 
+    TEXTOUT("QC Tools:");
+    TEXTOUT("--qctools, --qctools=FileName");
+    TEXTOUT("                    Create an XML file stats for QCTools");
+
     return CLI_RETURN_FINISH;
 }
 

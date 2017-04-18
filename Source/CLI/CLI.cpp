@@ -19,6 +19,7 @@
 #include <ZenLib/ZtringList.h>
 #include <ZenLib/File.h>
 #include <ZenLib/Dir.h>
+#include <zlib.h>
 
 #if !defined(WINDOWS)
     #include <unistd.h>
@@ -107,6 +108,12 @@ void Log_0(struct MediaInfo_Event_Log_0* Event)
         if (format == MediaConchLib::format_CSV && !policies.size())
         {
             err = "CLI can use CSV format only with policies.";
+            return CLI_RETURN_ERROR;
+        }
+
+        if (report_set[MediaConchLib::report_QCTools] && (format != MediaConchLib::format_Xml || files.size() != 1))
+        {
+            err = "QC Tools can be used only with XML format and with only one file.";
             return CLI_RETURN_ERROR;
         }
 
@@ -273,14 +280,44 @@ void Log_0(struct MediaInfo_Event_Log_0* Event)
 
         cr.display_content = &display_content;
         MCL.checker_get_report(cr, &result, error);
-        MediaInfoLib::String report_mi = ZenLib::Ztring().From_UTF8(result.report);
 
-        STRINGOUT(report_mi);
-        //Output, in a file if needed
-        if (!LogFile_FileName.empty())
-            LogFile_Action(report_mi);
+        if (!report_set[MediaConchLib::report_QCTools])
+        {
+            MediaInfoLib::String report_mi = ZenLib::Ztring().From_UTF8(result.report);
+
+            STRINGOUT(report_mi);
+            //Output, in a file if needed
+            if (!LogFile_FileName.empty())
+                LogFile_Action(report_mi);
+        }
+        else
+            output_qctools_report(result.report);
 
         return 0;
+    }
+
+    //--------------------------------------------------------------------------
+    void CLI::output_qctools_report(const std::string& report)
+    {
+        for (size_t i = 0; i < qc_tools_output.size(); ++i)
+        {
+            //No file to output, write to stdout
+            if (!qc_tools_output[i].size())
+            {
+                MediaInfoLib::String report_mi = ZenLib::Ztring().From_UTF8(report);
+
+                STRINGOUT(report_mi);
+            }
+            else
+            {
+                gzFile f = (gzFile)gzopen(qc_tools_output[i].c_str(), "wb");
+                if (f == NULL)
+                    continue;
+
+                gzwrite(f, report.c_str(), report.size());
+                gzclose(f);
+            }
+        }
     }
 
     //--------------------------------------------------------------------------
@@ -402,7 +439,7 @@ void Log_0(struct MediaInfo_Event_Log_0* Event)
     }
 
     //--------------------------------------------------------------------------
-    void CLI::set_report_set(std::string& report_kind)
+    void CLI::set_report_set(const std::string& report_kind)
     {
         if (report_kind == "MediaConch" || report_kind == "mediaconch")
             report_set.set(MediaConchLib::report_MediaConch);
@@ -412,6 +449,8 @@ void Log_0(struct MediaInfo_Event_Log_0* Event)
             report_set.set(MediaConchLib::report_MediaTrace);
         if (report_kind == "MicroMediaTrace" || report_kind == "micromediatrace")
             report_set.set(MediaConchLib::report_MicroMediaTrace);
+        if (report_kind == "QCTools" || report_kind == "qctools")
+            report_set.set(MediaConchLib::report_QCTools);
     }
 
     //--------------------------------------------------------------------------
@@ -606,6 +645,15 @@ void Log_0(struct MediaInfo_Event_Log_0* Event)
         watch_folder_user = new long;
         char *end = NULL;
         *watch_folder_user = strtol(user.c_str(), &end, 10);
+        return 0;
+    }
+
+    //--------------------------------------------------------------------------
+    int CLI::add_qctools_filename(const std::string& filename)
+    {
+        set_report_set("qctools");
+        set_format(MediaConchLib::format_Xml);
+        qc_tools_output.push_back(filename);
         return 0;
     }
 

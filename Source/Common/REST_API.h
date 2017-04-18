@@ -53,6 +53,8 @@ public:
         MEDIATRACE,
         VERAPDF,
         DPFMANAGER,
+        MICROMEDIATRACE,
+        QCTOOLS,
     };
 
     std::string get_Report_string(Report r)
@@ -69,6 +71,8 @@ public:
             ReportString(MEDIATRACE);
             ReportString(VERAPDF);
             ReportString(DPFMANAGER);
+            ReportString(MICROMEDIATRACE);
+            ReportString(QCTOOLS);
             default:
                 break;
         }
@@ -88,6 +92,8 @@ public:
         ReportString(MEDIATRACE);
         ReportString(VERAPDF);
         ReportString(DPFMANAGER);
+        ReportString(MICROMEDIATRACE);
+        ReportString(QCTOOLS);
 
 #undef ReportString
 

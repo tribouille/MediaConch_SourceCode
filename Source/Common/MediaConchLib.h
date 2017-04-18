@@ -68,6 +68,7 @@ public:
         report_MediaVeraPdf,
         report_MediaDpfManager,
         report_MicroMediaTrace,
+        report_QCTools,
         report_Max,
     };
 
@@ -108,6 +109,7 @@ public:
         PLUGIN_FORMAT = 0,
         PLUGIN_PRE_HOOK,
         PLUGIN_LOG,
+        PLUGIN_STAT,
         PLUGIN_MAX,
     };
 
@@ -254,6 +256,22 @@ public:
             Policy_Policy   *policy;
             std::string     *jstree;
         };
+    };
+
+    struct StatsFrameMin
+    {
+        StatsFrameMin() : stream(0) {}
+        ~StatsFrameMin() {}
+        StatsFrameMin(const StatsFrameMin& s) : plugin(s.plugin), name(s.name), stream(s.stream)
+        {
+            for (size_t i = 0; i < s.stats.size(); ++i)
+                stats.push_back(s.stats[i]);
+        }
+
+        std::string          plugin;
+        std::string          name;
+        std::vector<double>  stats;
+        size_t               stream;
     };
 
     static const std::string display_xml_name;

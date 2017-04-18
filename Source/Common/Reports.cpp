@@ -16,6 +16,7 @@
 #include "JS_Tree.h"
 #include "Schema.h"
 #include "Xslt.h"
+#include "StatsFrame.h"
 
 #include "Common/generated/ImplementationReportXsl.h"
 #include "Common/generated/ImplementationReportVeraPDFXsl.h"
@@ -363,6 +364,20 @@ int Reports::get_reports_output(int user, const std::vector<long>& files,
                 result->report += "\r\n";
             }
         }
+
+        if (report_set[MediaConchLib::report_QCTools])
+        {
+            for (size_t i = 0; i < files.size(); ++i)
+            {
+                if (f != MediaConchLib::format_Xml)
+                    continue;
+
+                std::string tmp;
+                get_stats_report(user, files[i], tmp, err);
+                result->report += tmp + "\n";
+            }
+        }
+
     }
 
     return 0;
@@ -509,6 +524,37 @@ int Reports::get_dpfmanager_report(int user, long file, std::string& report, boo
         return -1;
 
     valid = dpfmanager_report_is_valid(report);
+    return 0;
+}
+
+//---------------------------------------------------------------------------
+int Reports::get_stats_report(int user, long file, std::string& report, std::string& err)
+{
+    std::vector<MediaConchLib::StatsFrameMin*> vec;
+    if (core->get_stats_saved(user, file, vec, err) < 0)
+        return -1;
+
+    std::map<std::string, std::map<size_t, StatsFrame> > stats;
+    for (size_t i = 0; i < vec.size(); ++i)
+    {
+        if (!vec[i])
+            continue;
+
+        for (size_t j = 0; j < vec[i]->stats.size(); ++j)
+            stats[vec[i]->plugin][vec[i]->stream].vector_to_data(vec[i]->name, vec[i]->stats[j]);
+
+        delete vec[i];
+        vec[i] = NULL;
+    }
+
+    std::map<std::string, std::map<size_t, StatsFrame> >::iterator it = stats.begin();
+    for (; it != stats.end(); ++it)
+    {
+        std::map<size_t, StatsFrame>::iterator ite = it->second.begin();
+        for (; ite != it->second.end(); ++ite)
+            ite->second.to_xml(report, 0, 0); //TODO
+    }
+
     return 0;
 }
 

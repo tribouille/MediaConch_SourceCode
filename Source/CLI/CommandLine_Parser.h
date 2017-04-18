@@ -59,6 +59,7 @@ CL_OPTION(WatchFolder);
 CL_OPTION(WatchFolderReports);
 CL_OPTION(WatchFolderNotRecursive);
 CL_OPTION(WatchFolderUser);
+CL_OPTION(QCTools);
 CL_OPTION(Default);
 
 //***************************************************************************

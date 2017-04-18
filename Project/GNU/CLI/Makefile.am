@@ -18,10 +18,13 @@ mediaconch_SOURCES = \
     ../../../Source/Common/XsltPolicy.cpp \
     ../../../Source/Common/UnknownPolicy.cpp \
     ../../../Source/Common/Database.cpp \
+    ../../../Source/Common/SQLLite.cpp \
     ../../../Source/Common/DatabaseReport.cpp \
     ../../../Source/Common/NoDatabaseReport.cpp \
-    ../../../Source/Common/SQLLite.cpp \
     ../../../Source/Common/SQLLiteReport.cpp \
+    ../../../Source/Common/DatabaseStats.cpp \
+    ../../../Source/Common/NoDatabaseStats.cpp \
+    ../../../Source/Common/SQLLiteStats.cpp \
     ../../../Source/Common/Json.cpp \
     ../../../Source/Common/Configuration.cpp \
     ../../../Source/Common/REST_API.cpp \
@@ -38,6 +41,9 @@ mediaconch_SOURCES = \
     ../../../Source/Common/DpfManager.cpp \
     ../../../Source/Common/PluginPreHook.cpp \
     ../../../Source/Common/PluginFileLog.cpp \
+    ../../../Source/Common/PluginStats.cpp \
+    ../../../Source/Common/PluginStatsFrameFFmpeg.cpp \
+    ../../../Source/Common/StatsFrame.cpp \
     ../../../Source/Common/WatchFoldersManager.cpp \
     ../../../Source/Common/WatchFolder.cpp
 
