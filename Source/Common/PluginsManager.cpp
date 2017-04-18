@@ -18,6 +18,7 @@
 #include "DpfManager.h"
 #include "PluginPreHook.h"
 #include "PluginFileLog.h"
+#include "PluginStatsFrameFFmpeg.h"
 #if defined(WIN32)
 #include <Windows.h>
 #else
@@ -66,6 +67,8 @@ namespace MediaConch {
             p = new PluginPreHook;
         else if (obj.at("name").s == "FileLog")
             p = new PluginFileLog;
+        else if (obj.at("name").s == "StatsFrameFFmpeg")
+            p = new PluginStatsFrameFFmpeg;
         else
         {
             error += std::string("The plugin ") + obj.at("name").s + " is not managed yet.\n";
@@ -98,6 +101,8 @@ namespace MediaConch {
             pre_hook_plugins.push_back(p);
         else if (p->get_type() == MediaConchLib::PLUGIN_LOG)
             log_plugins.push_back(p);
+        else if (p->get_type() == MediaConchLib::PLUGIN_STAT)
+            stats_plugins[p->get_id()] = p;
         return 0;
     }
 

@@ -69,6 +69,7 @@ public:
     int  execute_pre_hook_plugins(QueueElement *el, std::string& err);
     int  attachments_to_add(QueueElement *el);
 
+    int  manage_frame(QueueElement *el, std::string& error);
     void write_log_timestamp(int level, std::string log);
     void log_cb(struct MediaInfo_Event_Log_0 *Event);
 

@@ -125,6 +125,9 @@ public:
     int   validation(int user, const std::vector<long>& files, Schema* S,
                      std::string& report, bool& valid, std::string& err);
 
+    // Stats
+    int get_stats_report(int user, long file, std::string& report, std::string& err);
+
     // Helper
     std::bitset<MediaConchLib::report_Max> get_bitset_with_mi_mt();
     std::bitset<MediaConchLib::report_Max> get_bitset_with_mi_mmt();

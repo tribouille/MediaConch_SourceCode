@@ -33,9 +33,11 @@ namespace MediaConch {
 
 class Schema;
 class DatabaseReport;
+class DatabaseStats;
 class WatchFoldersManager;
 class PluginsManager;
 class Plugin;
+struct StatsFrame;
 
 //***************************************************************************
 // Class Core
@@ -71,6 +73,7 @@ public:
     int  mediaconch_get_plugins(std::vector<std::string>& plugins, std::string& error);
     const std::map<std::string, Plugin*>& get_format_plugins() const;
     const std::vector<Plugin*>&           get_pre_hook_plugins() const;
+    const std::map<std::string, Plugin*>& get_stats_plugins() const;
 
     // watch folder
     int  mediaconch_list_watch_folders(std::vector<std::string>& folders, std::string& error);
@@ -145,6 +148,12 @@ public:
                               MediaConchLib::format f, const std::string& options, std::string& report, std::string& err);
 
     //***************************************************************************
+    // Report
+    //***************************************************************************
+    int      get_stats_saved(int user, long file_id,
+                             std::vector<MediaConchLib::StatsFrameMin*>& stats, std::string& err);
+
+    //***************************************************************************
     // Configuration
     //***************************************************************************
     void               load_configuration();
@@ -165,6 +174,7 @@ public:
     bool               is_using_daemon() const;
     void               get_daemon_address(std::string& addr, int& port) const;
     void               load_database();
+    void               load_database_stats();
     bool               database_is_enabled() const;
     bool               accepts_https();
     static void        unify_no_https(std::string& str);
@@ -182,6 +192,14 @@ public:
     int  implem_report_is_registered(int user, long file, const std::string& options, bool& registered,
                                      std::string& err);
 
+
+    //***************************************************************************
+    // Stats Database access
+    //***************************************************************************
+    int register_stats_to_db(long user_id, long file_id, const std::string& plugin, size_t stream_idx,
+                             const std::map<std::string, std::vector<double> >& stats, std::string& error);
+
+
     // TODO: removed and manage waiting time otherway
     void WaitRunIsFinished();
 
@@ -195,10 +213,11 @@ public:
     //***************************************************************************
     // Helper Zlib
     //***************************************************************************
+    static int  compress_buffer(ZenLib::int8u *src, size_t& src_len, ZenLib::int8u *dst, size_t& dst_len, MediaConchLib::compression& compress);
     static void compress_report(std::string& report, MediaConchLib::compression& compress);
     static void compress_report_copy(std::string& report, const char* src, size_t src_len, MediaConchLib::compression& compress);
     static int  uncompress_report(std::string& report, MediaConchLib::compression compress);
-
+    static int  uncompress_buffer(const ZenLib::int8u *src, size_t src_len, ZenLib::int8u *dst, size_t& dst_len, size_t orig_len, MediaConchLib::compression& compress);
 
     //***************************************************************************
     // Event Callback
@@ -215,7 +234,10 @@ private:
     MediaInfoNameSpace::MediaInfo     *MI;
     DatabaseReport*                    db;
     CriticalSection                    db_mutex;
+    DatabaseStats*                     db_stats;
+    CriticalSection                    db_stats_mutex;
     static const std::string           database_name;
+    static const std::string           database_stats_name;
     Configuration*                     config;
     std::string                        configuration_file;
     std::string                        plugins_configuration_file;
@@ -247,7 +269,9 @@ private:
 
     std::string get_config_file();
     std::string get_database_path();
+    std::string get_database_stats_path();
     DatabaseReport *get_db();
+    DatabaseStats *get_stats_db();
     static bool sort_pair_options(const std::pair<std::string,std::string>& a, const std::pair<std::string,std::string>& b);
 };
 

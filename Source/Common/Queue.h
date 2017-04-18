@@ -34,6 +34,7 @@
 #include <map>
 #include <list>
 #include <vector>
+#include "StatsFrame.h"
 
 namespace MediaConch
 {
@@ -55,16 +56,18 @@ namespace MediaConch
     public:
         QueueElement(Scheduler *s);
         virtual ~QueueElement();
-        int                                user;
-        int                                id;
-        std::string                        filename;
-        std::string                        real_filename;
-        std::string                        options_str;
+        int                                               user;
+        int                                               id;
+        std::string                                       filename;
+        std::string                                       real_filename;
+        std::string                                       options_str;
         std::vector<std::pair<std::string, std::string> > options;
-        std::vector<std::string>           plugins;
-        std::vector<Attachment*>           attachments;
-        long                               file_id;
-        bool                               mil_analyze;
+        std::vector<std::string>                          plugins;
+        std::vector<Attachment*>                          attachments;
+        //         plugin              stream             data name    values
+        std::map<std::string, std::map<size_t, std::map<std::string, std::vector<double> > > >       stats;
+        long                                              file_id;
+        bool                                              mil_analyze;
 
         void                               Entry();
         void                               stop();

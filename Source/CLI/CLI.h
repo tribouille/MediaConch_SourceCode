@@ -31,7 +31,7 @@ namespace MediaConch
         int  init(std::string& err);
         int  run(std::string& err);
         int  finish();
-        void set_report_set(std::string& report_kind);
+        void set_report_set(const std::string& report_kind);
         void set_report_reset();
         int  set_format(MediaConchLib::format f);
         int  set_format(const std::string& f);
@@ -60,6 +60,7 @@ namespace MediaConch
         int  set_watch_folder_user(const std::string& user);
         void set_list_watch_folders_mode();
         void set_list_mode();
+        int  add_qctools_filename(const std::string& filename = std::string());
 
       private:
         CLI(const CLI&);
@@ -75,11 +76,13 @@ namespace MediaConch
         void add_files_recursively(const std::string& filename);
         void file_info_report(const MediaConchLib::Checker_FileInfo* info, std::string& report);
         int  run_list_files(std::string& err);
+        void output_qctools_report(const std::string& report);
 
         MediaConchLib MCL;
         std::vector<std::string> files;
         std::vector<std::string> policies;
         std::vector<std::string> plugins;
+        std::vector<std::string> qc_tools_output;
         std::vector<std::pair<std::string,std::string> > options;
         std::string              error;
         std::string              display_content;
