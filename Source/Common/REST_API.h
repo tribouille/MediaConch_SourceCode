@@ -537,6 +537,35 @@ public:
         std::string               to_str() const;
     };
 
+    // MD5
+    struct Checker_Get_MD5_Req
+    {
+        Checker_Get_MD5_Req() :             user(-1) {}
+
+        int                                user;
+        std::vector<long>                  ids;
+        std::string                        to_str() const;
+    };
+
+    struct Checker_Get_MD5
+    {
+        Checker_Get_MD5() :      file_id(-1), stream(0) {}
+        std::vector<std::string> hashes;
+        long                     file_id;
+        size_t                   stream;
+        std::string              to_str() const;
+    };
+
+    struct Checker_Get_MD5_Res
+    {
+        Checker_Get_MD5_Res() : nok(NULL) {}
+        ~Checker_Get_MD5_Res();
+
+        std::vector<Checker_Get_MD5*>    md5s;
+        MediaConch_Nok                  *nok;
+        std::string                      to_str() const;
+    };
+
 //***************************************************************************
 // Policy
 //***************************************************************************
@@ -1039,6 +1068,7 @@ public:
     int serialize_checker_id_from_filename_req(Checker_Id_From_Filename_Req& req, std::string&, std::string& err);
     int serialize_checker_file_information_req(Checker_File_Information_Req& req, std::string&, std::string& err);
     int serialize_default_values_for_type_req(Default_Values_For_Type_Req& req, std::string&, std::string& err);
+    int serialize_checker_get_md5_req(Checker_Get_MD5_Req& req, std::string&, std::string& err);
 
     int serialize_xslt_policy_create_req(XSLT_Policy_Create_Req& req, std::string&, std::string& err);
     int serialize_policy_import_req(Policy_Import_Req& req, std::string&, std::string& err);
@@ -1084,6 +1114,7 @@ public:
     int serialize_checker_id_from_filename_res(Checker_Id_From_Filename_Res& res, std::string&, std::string& err);
     int serialize_checker_file_information_res(Checker_File_Information_Res& res, std::string&, std::string& err);
     int serialize_default_values_for_type_res(Default_Values_For_Type_Res& res, std::string&, std::string& err);
+    int serialize_checker_get_md5_res(Checker_Get_MD5_Res& res, std::string&, std::string& err);
 
     int serialize_xslt_policy_create_res(XSLT_Policy_Create_Res& res, std::string&, std::string& err);
     int serialize_policy_import_res(Policy_Import_Res& res, std::string&, std::string& err);
@@ -1128,6 +1159,7 @@ public:
     Checker_Id_From_Filename_Req        *parse_checker_id_from_filename_req(const std::string& data, std::string& err);
     Checker_File_Information_Req        *parse_checker_file_information_req(const std::string& data, std::string& err);
     Default_Values_For_Type_Req         *parse_default_values_for_type_req(const std::string& data, std::string& err);
+    Checker_Get_MD5_Req                 *parse_checker_get_md5_req(const std::string& data, std::string& err);
 
     XSLT_Policy_Create_Req              *parse_xslt_policy_create_req(const std::string&, std::string& err);
     Policy_Import_Req                   *parse_policy_import_req(const std::string&, std::string& err);
@@ -1174,6 +1206,7 @@ public:
     Checker_Id_From_Filename_Req        *parse_uri_checker_id_from_filename_req(const std::string& uri, std::string& err);
     Checker_File_Information_Req        *parse_uri_checker_file_information_req(const std::string& uri, std::string& err);
     Default_Values_For_Type_Req         *parse_uri_default_values_for_type_req(const std::string& uri, std::string& err);
+    Checker_Get_MD5_Req                 *parse_uri_checker_get_md5_req(const std::string& uri, std::string& err);
 
     XSLT_Policy_Create_Req              *parse_uri_xslt_policy_create_req(const std::string&, std::string& err);
     Policy_Import_Req                   *parse_uri_policy_import_req(const std::string&, std::string& err);
@@ -1218,6 +1251,7 @@ public:
     Checker_Id_From_Filename_Res       *parse_checker_id_from_filename_res(const std::string& data, std::string& err);
     Checker_File_Information_Res       *parse_checker_file_information_res(const std::string& data, std::string& err);
     Default_Values_For_Type_Res        *parse_default_values_for_type_res(const std::string& data, std::string& err);
+    Checker_Get_MD5_Res                *parse_checker_get_md5_res(const std::string& data, std::string& err);
 
     XSLT_Policy_Create_Res             *parse_xslt_policy_create_res(const std::string&, std::string& err);
     Policy_Import_Res                  *parse_policy_import_res(const std::string&, std::string& err);
@@ -1265,6 +1299,7 @@ private:
     int serialize_checker_report_ok(Checker_Report_Ok* ok, Container::Value&, std::string& err);
     Container::Value serialize_checker_list_file(const std::string& file, int id, std::string& err);
     Container::Value serialize_checker_validate_ok(Checker_Validate_Ok* ok, std::string& err);
+    int serialize_checker_get_md5(Checker_Get_MD5*, Container::Value&, std::string&);
     void serialize_policies_get_policies(const std::vector<MediaConchLib::Policy_Policy*>&, Container::Value& policies, std::string& err);
     void serialize_policy_public_policy(const std::vector<Policy_Public_Policy*>&, Container::Value& policies, std::string& err);
     void serialize_policies_get_policies_names(const std::vector<std::pair<int, std::string> >& policies, Container::Value &p, std::string& err);
@@ -1279,6 +1314,7 @@ private:
     int parse_checker_report_ok(Container::Value *v, Checker_Report_Ok** ok, std::string& err);
     int parse_checker_list_file(Container::Value *v, std::string& file, long& id, std::string& err);
     int parse_checker_validate_ok(Container::Value *v, std::vector<Checker_Validate_Ok*>& oks, std::string& err);
+    int parse_checker_get_md5(Container::Value& v, std::vector<Checker_Get_MD5*>& md5s, std::string& err);
     int parse_policies_get_policies(Container::Value* policies, std::vector<MediaConchLib::Policy_Policy*>&, std::string& err);
     int parse_policy_public_policy(Container::Value* policies, std::vector<Policy_Public_Policy*>&, std::string& err);
     int parse_policies_get_policies_names(Container::Value* policies, std::vector<std::pair<int, std::string> >&, std::string& err);

@@ -69,6 +69,14 @@ static void __stdcall Event_CallBackFunction(unsigned char* Data_Content, size_t
             if (EventVersion == 0)
                 queue->attachment_cb((struct MediaInfo_Event_Global_AttachedFile_0 *)Data_Content);
             break;
+        case MediaInfo_Event_Global_FrameHash:
+            if (EventVersion == 0 && Data_Size >= sizeof(MediaInfo_Event_Global_FrameHash_0))
+                queue->framehash_cb((MediaInfo_Event_Global_FrameHash_0*)Data_Content);
+            break;
+        case MediaInfo_Event_Global_NewStream:
+            if (EventVersion == 0 && Data_Size >= sizeof(MediaInfo_Event_Global_NewStream_0))
+                queue->register_new_stream_cb((MediaInfo_Event_Global_NewStream_0*)Data_Content);
+            break;
         case MediaInfo_Event_Log:
             if (EventVersion == 0 && Data_Size >= sizeof(struct MediaInfo_Event_Log_0))
                 queue->log_cb((struct MediaInfo_Event_Log_0*)Data_Content);
@@ -194,6 +202,43 @@ int QueueElement::attachment_cb(struct MediaInfo_Event_Global_AttachedFile_0 *Ev
 
     attachments.push_back(attach);
 
+    return 0;
+}
+
+//---------------------------------------------------------------------------
+int QueueElement::framehash_cb(MediaInfo_Event_Global_FrameHash_0 *event)
+{
+    if (event->StreamIDs_Size == 0)
+        return 0;
+
+    size_t stream = 0;
+    size_t i = 0;
+    for (; i < stream_idx.size(); ++i)
+        if (stream_idx[i] == event->StreamIDs[0])
+            break;
+
+    if (i == stream_idx.size())
+        return -1;
+
+    stream = i;
+
+    for (size_t i = 0; i < event->Hashes_Size; ++i)
+    {
+        if (event->Hashes[i]->Kind != FrameHashKind_MD5 || !event->Hashes[i]->Value)
+            continue;
+
+        md5s[stream].push_back(event->Hashes[i]->Value);
+        break;
+    }
+
+    return 0;
+}
+
+//---------------------------------------------------------------------------
+int QueueElement::register_new_stream_cb(MediaInfo_Event_Global_NewStream_0 *event)
+{
+    if (event->StreamIDs_Size > 0)
+        stream_idx.push_back(event->StreamIDs[0]);
     return 0;
 }
 

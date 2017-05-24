@@ -117,29 +117,23 @@ namespace MediaConch {
             return;
         }
 
+        std::string error;
+        if (md5s_to_add(el, error) < 0)
+        {
+            //TODO error
+        }
+
         if (another_work_to_do(el, MI) <= 0)
             return;
 
         if (attachments_to_add(el) < 0)
             return;
 
+        if (register_stats(el, error) <= 0)
+            return;
+
         //TODO
-        std::string error;
         manage_frame(el, error);
-        std::map<std::string, std::map<size_t, std::map<std::string, std::vector<double> > > >::iterator it = el->stats.begin();
-        //For each plugin
-        for (; it != el->stats.end(); ++it)
-        {
-            //For each stream
-            std::map<size_t, std::map<std::string, std::vector<double> > >::iterator it_stream = it->second.begin();
-            for (; it_stream != it->second.end(); ++it_stream)
-            {
-                if (core->register_stats_to_db(el->user, el->file_id, it->first, it_stream->first, it_stream->second, error) < 0)
-                {
-                    //TODO error
-                }
-            }
-        }
 
         CS.Enter();
         core->register_reports_to_database(el->user, el->file_id, MI);
@@ -287,6 +281,16 @@ namespace MediaConch {
         return 0;
     }
 
+    int Scheduler::md5s_to_add(QueueElement *el, std::string& err)
+    {
+        if (!el->md5s.size())
+            return 0;
+
+        std::map<long, std::map<size_t, std::vector<std::string> > > tmp;
+        tmp[el->file_id] = el->md5s;
+        return core->file_add_md5s(el->user, tmp, err);
+    }
+
     int Scheduler::another_work_to_do(QueueElement *el, MediaInfoNameSpace::MediaInfo* MI)
     {
         // Before registering, check the format
@@ -367,6 +371,26 @@ namespace MediaConch {
                     stats[i]->data_to_vector(el->stats[plugin][stream_idx]);
             }
         }
+        return 0;
+    }
+
+    int Scheduler::register_stats(QueueElement *el, std::string& error)
+    {
+        std::map<std::string, std::map<size_t, std::map<std::string, std::vector<double> > > >::iterator it = el->stats.begin();
+        //For each plugin
+        for (; it != el->stats.end(); ++it)
+        {
+            //For each stream
+            std::map<size_t, std::map<std::string, std::vector<double> > >::iterator it_stream = it->second.begin();
+            for (; it_stream != it->second.end(); ++it_stream)
+            {
+                if (core->register_stats_to_db(el->user, el->file_id, it->first, it_stream->first, it_stream->second, error) < 0)
+                {
+                    //TODO error
+                }
+            }
+        }
+
         return 0;
     }
 

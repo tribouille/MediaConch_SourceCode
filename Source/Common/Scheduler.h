@@ -70,6 +70,8 @@ public:
     int  attachments_to_add(QueueElement *el);
 
     int  manage_frame(QueueElement *el, std::string& error);
+    int  md5s_to_add(QueueElement *el, std::string& err);
+    int  register_stats(QueueElement *el, std::string& err);
     void write_log_timestamp(int level, std::string log);
     void log_cb(struct MediaInfo_Event_Log_0 *Event);
 

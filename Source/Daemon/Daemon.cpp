@@ -110,6 +110,7 @@ namespace MediaConch
         httpd->commands.checker_id_from_filename_cb = on_checker_id_from_filename_command;
         httpd->commands.checker_file_information_cb = on_checker_file_information_command;
         httpd->commands.default_values_for_type_cb = on_default_values_for_type_command;
+        httpd->commands.checker_get_md5_cb = on_checker_get_md5_command;
 
         httpd->commands.xslt_policy_create_cb = on_xslt_policy_create_command;
         httpd->commands.policy_import_cb = on_policy_import_command;
@@ -1195,6 +1196,50 @@ namespace MediaConch
         }
 
         FUN_CMD_END(Default_Values_For_Type)
+    }
+
+    //--------------------------------------------------------------------------
+    FUN_CMD_PROTO(checker_get_md5, Checker_Get_MD5)
+    {
+        FUN_CMD_START(Checker_Get_MD5)
+
+        MediaConchLib::Checker_Get_MD5 c_md5;
+        c_md5.user = req->user;
+
+        for (size_t i = 0; i < req->ids.size(); ++i)
+        {
+            long id = req->ids[i];
+            if (id < 0)
+            {
+                FUN_CMD_NOK(res, "ID not existing", -1)
+                FUN_CMD_END(Checker_Report)
+            }
+
+            c_md5.files.push_back(id);
+        }
+
+        // Output
+        MediaConchLib::Checker_Get_MD5Res result;
+        std::string err;
+        if (d->MCL->checker_get_md5(c_md5, &result, err) < 0)
+            FUN_CMD_NOK(res, err, -1)
+        else
+        {
+            for (size_t i = 0; i < result.md5s.size(); ++i)
+            {
+                if (!result.md5s[i])
+                    continue;
+
+                RESTAPI::Checker_Get_MD5* md5 = new RESTAPI::Checker_Get_MD5;
+                md5->stream = result.md5s[i]->stream;
+                md5->file_id = result.md5s[i]->file_id;
+                for (size_t j = 0; j < result.md5s[i]->hash.size(); ++j)
+                    md5->hashes.push_back(result.md5s[i]->hash[j]);
+                res.md5s.push_back(md5);
+            }
+        }
+
+        FUN_CMD_END(Checker_Get_MD5)
     }
 
     //--------------------------------------------------------------------------

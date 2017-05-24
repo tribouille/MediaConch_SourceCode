@@ -35,6 +35,7 @@
 #include <list>
 #include <vector>
 #include "StatsFrame.h"
+#include "MediaConchLib.h"
 
 namespace MediaConch
 {
@@ -64,6 +65,8 @@ namespace MediaConch
         std::vector<std::pair<std::string, std::string> > options;
         std::vector<std::string>                          plugins;
         std::vector<Attachment*>                          attachments;
+        std::vector<size_t>                               stream_idx;
+        std::map<size_t, std::vector<std::string> >       md5s;
         //         plugin              stream             data name    values
         std::map<std::string, std::map<size_t, std::map<std::string, std::vector<double> > > >       stats;
         long                                              file_id;
@@ -73,6 +76,8 @@ namespace MediaConch
         void                               stop();
         double                             percent_done();
         int                                attachment_cb(struct MediaInfo_Event_Global_AttachedFile_0 *Event);
+        int                                framehash_cb(struct MediaInfo_Event_Global_FrameHash_0 *Event);
+        int                                register_new_stream_cb(struct MediaInfo_Event_Global_NewStream_0 *Event);
         int                                log_cb(struct MediaInfo_Event_Log_0 *Event);
 
     private:

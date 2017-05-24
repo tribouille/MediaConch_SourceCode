@@ -138,6 +138,27 @@ public:
         Checker_ReportRes() : has_valid(false), valid(true) {}
     };
 
+    struct Checker_Get_MD5
+    {
+        Checker_Get_MD5() : user(-1) {}
+
+        std::vector<long>     files;
+        int                   user;
+    };
+
+    struct Checker_MD5
+    {
+        Checker_MD5() : file_id(-1), stream(0) {}
+        long                     file_id;
+        size_t                   stream;
+        std::vector<std::string> hash;
+    };
+
+    struct Checker_Get_MD5Res
+    {
+        std::vector<Checker_MD5*> md5s;
+    };
+
     struct Checker_ValidateRes
     {
         long                    id;
@@ -332,6 +353,7 @@ public:
                           const std::vector<std::string>& policies_contents,
                           const std::map<std::string, std::string>& options,
                           std::vector<Checker_ValidateRes*>& result, std::string& error);
+    int  checker_get_md5(Checker_Get_MD5& c_md5, Checker_Get_MD5Res* result, std::string& error);
 
     //Clear
     int  checker_clear(int user, const std::vector<long>& files, std::string& error);

@@ -95,6 +95,7 @@ public:
                          const std::vector<std::string>& policies_contents,
                          const std::map<std::string, std::string>& options,
                          std::vector<MediaConchLib::Checker_ValidateRes*>& result, std::string& error);
+    int checker_get_md5(MediaConchLib::Checker_Get_MD5& c_md5, MediaConchLib::Checker_Get_MD5Res* result, std::string& error);
 
 
     //***************************************************************************

@@ -107,6 +107,11 @@ static bool wait_for_another_argument(std::string& argument)
         Last_Argument = "--watchfolder-user=";
         return true;
     }
+    else if (argument=="-framemd5")
+    {
+        Last_Argument = "--framemd5file=";
+        return true;
+    }
     return false;
 }
 
@@ -238,6 +243,7 @@ int Parse(MediaConch::CLI* cli, std::string& argument)
     OPTION("--user",                                        User)
     OPTION("--list",                                        List)
     OPTION("--qctools",                                     QCTools)
+    OPTION("--framemd5file",                                FrameMD5File)
     //Default
     OPTION("--",                                            Default)
     else
@@ -698,6 +704,24 @@ CL_OPTION(QCTools)
         filename.assign(argument, egal_pos + 1 , std::string::npos);
         cli->add_qctools_filename(filename);
     }
+
+    return CLI_RETURN_NONE;
+}
+
+//---------------------------------------------------------------------------
+CL_OPTION(FrameMD5File)
+{
+    //Form : --framemd5file=file, -framemd5 file
+    size_t egal_pos = argument.find('=');
+    if (egal_pos == std::string::npos)
+    {
+        Help();
+        return CLI_RETURN_ERROR;
+    }
+
+    std::string md5_file;
+    md5_file.assign(argument, egal_pos + 1 , std::string::npos);
+    cli->set_framemd5_file_to_use(md5_file);
 
     return CLI_RETURN_NONE;
 }

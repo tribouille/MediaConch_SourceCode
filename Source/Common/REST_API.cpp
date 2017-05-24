@@ -262,6 +262,23 @@ RESTAPI::Checker_Validate_Res::~Checker_Validate_Res()
 }
 
 //---------------------------------------------------------------------------
+RESTAPI::Checker_Get_MD5_Res::~Checker_Get_MD5_Res()
+{
+    for (size_t i = 0; i < md5s.size(); ++i)
+    {
+        delete md5s[i];
+        md5s[i] = NULL;
+    }
+    md5s.clear();
+
+    if (nok)
+    {
+        delete nok;
+        nok = NULL;
+    }
+}
+
+//---------------------------------------------------------------------------
 #define DESTRUCTOR_POLICY(NAME) \
     RESTAPI::NAME::~NAME()   \
     {                           \
@@ -638,6 +655,23 @@ std::string RESTAPI::Default_Values_For_Type_Req::to_str() const
 
     out << "{\"type\":\"" << type << "\"";
     out << ",\"field\":\"" << field << "\"}";
+    return out.str();
+}
+
+//---------------------------------------------------------------------------
+std::string RESTAPI::Checker_Get_MD5_Req::to_str() const
+{
+    std::stringstream out;
+
+    out << "{\"user\":" << user;
+    out << ",\"ids\":[";
+    for (size_t i = 0; i < ids.size(); ++i)
+    {
+        if (i)
+            out << ",";
+        out << ids[i];
+    }
+    out << "]}";
     return out.str();
 }
 
@@ -1310,8 +1344,43 @@ std::string RESTAPI::Default_Values_For_Type_Res::to_str() const
     return out.str();
 }
 
-//  Policy
+//---------------------------------------------------------------------------
+std::string RESTAPI::Checker_Get_MD5::to_str() const
+{
+    std::stringstream out;
 
+    out << "{hash_number: " << hashes.size();
+    out << ", stream: " << stream;
+    out << "}";
+    return out.str();
+}
+
+//---------------------------------------------------------------------------
+std::string RESTAPI::Checker_Get_MD5_Res::to_str() const
+{
+    std::stringstream out;
+
+    out << "{";
+    if (nok)
+        out << "\"nok\":" << nok->to_str() << "}";
+    else
+    {
+        out << "\"md5s\":[";
+        for (size_t i = 0; i < md5s.size(); ++i)
+        {
+            if (!md5s[i])
+                continue;
+
+            if (i)
+                out << ",";
+            out << md5s[i]->to_str();
+        }
+        out << "]}";
+    }
+    return out.str();
+}
+
+//  Policy
 //---------------------------------------------------------------------------
 std::string RESTAPI::XSLT_Policy_Create_Res::to_str() const
 {
@@ -2129,6 +2198,30 @@ int RESTAPI::serialize_default_values_for_type_req(Default_Values_For_Type_Req& 
 
     v.type = Container::Value::CONTAINER_TYPE_OBJECT;
     v.obj["DEFAULT_VALUES_FOR_TYPE"] = child;
+
+    if (model->serialize(v, data) < 0)
+    {
+        err = model->get_error();
+        return -1;
+    }
+
+    return 0;
+}
+
+//---------------------------------------------------------------------------
+int RESTAPI::serialize_checker_get_md5_req(Checker_Get_MD5_Req& req, std::string& data, std::string& err)
+{
+    Container::Value v, child, user;
+
+    child.type = Container::Value::CONTAINER_TYPE_OBJECT;
+    child.obj["ids"] = serialize_ids(req.ids, err);
+
+    user.type = Container::Value::CONTAINER_TYPE_INTEGER;
+    user.l = req.user;
+    child.obj["user"] = user;
+
+    v.type = Container::Value::CONTAINER_TYPE_OBJECT;
+    v.obj["CHECKER_GET_MD5"] = child;
 
     if (model->serialize(v, data) < 0)
     {
@@ -3111,6 +3204,35 @@ int RESTAPI::serialize_default_values_for_type_res(Default_Values_For_Type_Res& 
 
     v.type = Container::Value::CONTAINER_TYPE_OBJECT;
     v.obj["DEFAULT_VALUES_FOR_TYPE_RESULT"] = child;
+
+    if (model->serialize(v, data) < 0)
+    {
+        err = model->get_error();
+        return -1;
+    }
+
+    return 0;
+}
+
+//---------------------------------------------------------------------------
+int RESTAPI::serialize_checker_get_md5_res(Checker_Get_MD5_Res& res, std::string& data, std::string& err)
+{
+    Container::Value v, child, md5s;
+
+    child.type = Container::Value::CONTAINER_TYPE_OBJECT;
+    if (res.nok)
+        child.obj["nok"] = serialize_mediaconch_nok(res.nok, err);
+    else
+    {
+        md5s.type = Container::Value::CONTAINER_TYPE_ARRAY;
+        for (size_t i = 0; i < res.md5s.size(); ++i)
+            if (serialize_checker_get_md5(res.md5s[i], md5s, err))
+                return -1;
+        child.obj["md5s"] = md5s;
+    }
+
+    v.type = Container::Value::CONTAINER_TYPE_OBJECT;
+    v.obj["CHECKER_GET_MD5_RESULT"] = child;
 
     if (model->serialize(v, data) < 0)
     {
@@ -4492,6 +4614,56 @@ RESTAPI::Default_Values_For_Type_Req *RESTAPI::parse_default_values_for_type_req
 }
 
 //---------------------------------------------------------------------------
+RESTAPI::Checker_Get_MD5_Req *RESTAPI::parse_checker_get_md5_req(const std::string& data, std::string& err)
+{
+    Container::Value v, *child;
+
+    if (model->parse(data, v))
+    {
+        err = model->get_error();
+        return NULL;
+    }
+
+    child = model->get_value_by_key(v, "CHECKER_GET_MD5");
+    if (!child || child->type != Container::Value::CONTAINER_TYPE_OBJECT)
+    {
+        err = "Missing CHECKER_GET_MD5 in the request";
+        return NULL;
+    }
+
+    Container::Value *ids, *user;
+    ids = model->get_value_by_key(*child, "ids");
+    user = model->get_value_by_key(*child, "user");
+
+    if (!ids || ids->type != Container::Value::CONTAINER_TYPE_ARRAY)
+    {
+        err = "Missing ids field in the request";
+        return NULL;
+    }
+
+    Checker_Get_MD5_Req *req = new Checker_Get_MD5_Req;
+    for (size_t i = 0; i < ids->array.size(); ++i)
+    {
+        Container::Value *id = &ids->array[i];
+
+        if (id->type != Container::Value::CONTAINER_TYPE_INTEGER)
+        {
+            err = "Id field type is not correct in the request";
+            delete req;
+            return NULL;
+        }
+        req->ids.push_back(id->l);
+    }
+
+    if (user && user->type == Container::Value::CONTAINER_TYPE_INTEGER)
+        req->user = user->l;
+    else
+        req->user = -1;
+
+    return req;
+}
+
+//---------------------------------------------------------------------------
 RESTAPI::XSLT_Policy_Create_Req *RESTAPI::parse_xslt_policy_create_req(const std::string& data, std::string& err)
 {
     Container::Value v, *child;
@@ -5755,6 +5927,14 @@ RESTAPI::Default_Values_For_Type_Req *RESTAPI::parse_uri_default_values_for_type
             start = std::string::npos;
     }
 
+    return req;
+}
+
+//---------------------------------------------------------------------------
+RESTAPI::Checker_Get_MD5_Req *RESTAPI::parse_uri_checker_get_md5_req(const std::string&, std::string&)
+{
+    Checker_Get_MD5_Req *req = new Checker_Get_MD5_Req;
+    //TODO
     return req;
 }
 
@@ -7744,6 +7924,50 @@ RESTAPI::Default_Values_For_Type_Res *RESTAPI::parse_default_values_for_type_res
 }
 
 //---------------------------------------------------------------------------
+RESTAPI::Checker_Get_MD5_Res *RESTAPI::parse_checker_get_md5_res(const std::string& data, std::string& err)
+{
+    Container::Value v, *child;
+
+    if (model->parse(data, v))
+    {
+        err = model->get_error();
+        return NULL;
+    }
+
+    child = model->get_value_by_key(v, "CHECKER_GET_MD5_RESULT");
+    if (!child || child->type != Container::Value::CONTAINER_TYPE_OBJECT)
+    {
+        err = "Missing CHECKER_GET_MD5_RESULT in the result";
+        return NULL;
+    }
+
+    Container::Value *md5s, *nok;
+    md5s = model->get_value_by_key(*child, "md5s");
+    nok = model->get_value_by_key(*child, "nok");
+
+    Checker_Get_MD5_Res *res = new Checker_Get_MD5_Res;
+    if (md5s && md5s->type == Container::Value::CONTAINER_TYPE_ARRAY)
+    {
+        for (size_t i = 0; i < md5s->array.size(); ++i)
+        if (parse_checker_get_md5(md5s->array[i], res->md5s, err) < 0)
+        {
+            delete res;
+            return NULL;
+        }
+    }
+
+    if (nok)
+    {
+        if (parse_mediaconch_nok(nok, &res->nok, err))
+        {
+            delete res;
+            return NULL;
+        }
+    }
+    return res;
+}
+
+//---------------------------------------------------------------------------
 RESTAPI::XSLT_Policy_Create_Res *RESTAPI::parse_xslt_policy_create_res(const std::string& data, std::string& err)
 {
     Container::Value v, *child;
@@ -9020,6 +9244,37 @@ Container::Value RESTAPI::serialize_checker_validate_ok(Checker_Validate_Ok* obj
 }
 
 //---------------------------------------------------------------------------
+int RESTAPI::serialize_checker_get_md5(Checker_Get_MD5* md5, Container::Value& md5s, std::string&)
+{
+    if (!md5)
+        return 0;
+
+    Container::Value v, file_id, stream, hashes;
+    v.type = Container::Value::CONTAINER_TYPE_OBJECT;
+
+    file_id.type = Container::Value::CONTAINER_TYPE_INTEGER;
+    file_id.l = md5->file_id;
+    v.obj["file_id"] = file_id;
+
+    stream.type = Container::Value::CONTAINER_TYPE_INTEGER;
+    stream.l = md5->stream;
+    v.obj["stream"] = stream;
+
+    hashes.type = Container::Value::CONTAINER_TYPE_ARRAY;
+    for (size_t i = 0; i < md5->hashes.size(); ++i)
+    {
+        Container::Value hash;
+        hash.type = Container::Value::CONTAINER_TYPE_STRING;
+        hash.s = md5->hashes[i];
+        hashes.array.push_back(hash);
+    }
+    v.obj["hashes"] = hashes;
+
+    md5s.array.push_back(v);
+    return 0;
+}
+
+//---------------------------------------------------------------------------
 void RESTAPI::serialize_a_policy(MediaConchLib::Policy_Policy* policy, Container::Value &ok_v, std::string& err)
 {
     Container::Value id, parent_id, is_system, is_public, kind, type, name, description, license, children;
@@ -9598,6 +9853,72 @@ int RESTAPI::parse_checker_validate_ok(Container::Value *v, std::vector<Checker_
         }
         oks.push_back(ok);
     }
+
+    return 0;
+}
+
+//---------------------------------------------------------------------------
+int RESTAPI::parse_checker_get_md5(Container::Value& v, std::vector<Checker_Get_MD5*>& md5s, std::string& err)
+{
+    if (v.type != Container::Value::CONTAINER_TYPE_OBJECT)
+    {
+        err = "checker get md5 has not the correct type.";
+        return -1;
+    }
+
+    Container::Value *file_id, *stream, *hashes;
+
+    file_id = model->get_value_by_key(v, "file_id");
+    stream = model->get_value_by_key(v, "stream");
+    hashes = model->get_value_by_key(v, "hashes");
+
+    Checker_Get_MD5* md5 = new Checker_Get_MD5;
+
+    if (stream)
+    {
+        if (stream->type != Container::Value::CONTAINER_TYPE_INTEGER)
+        {
+            err = "checker get md5 stream has not the correct type.";
+            delete md5;
+            return -1;
+        }
+        md5->stream = stream->l;
+    }
+
+    if (file_id)
+    {
+        if (file_id->type != Container::Value::CONTAINER_TYPE_INTEGER)
+        {
+            err = "checker get md5 file_id has not the correct type.";
+            delete md5;
+            return -1;
+        }
+        md5->file_id = file_id->l;
+    }
+
+    if (hashes)
+    {
+        if (hashes->type != Container::Value::CONTAINER_TYPE_ARRAY)
+        {
+            err = "checker get md5 hashes has not the correct type.";
+            delete md5;
+            return -1;
+        }
+
+        for (size_t i = 0; i < hashes->array.size(); ++i)
+        {
+            if (hashes->array[i].type != Container::Value::CONTAINER_TYPE_STRING)
+            {
+                err = "checker get md5 hashes has not the correct type.";
+                delete md5;
+                return -1;
+            }
+
+            md5->hashes.push_back(hashes->array[i].s);
+        }
+    }
+
+    md5s.push_back(md5);
 
     return 0;
 }

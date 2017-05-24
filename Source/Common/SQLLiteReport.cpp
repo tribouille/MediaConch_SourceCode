@@ -15,6 +15,7 @@
 
 //---------------------------------------------------------------------------
 #include "SQLLiteReport.h"
+#include "Core.h"
 #include <sstream>
 #include <stdio.h>
 #include <stdlib.h>
@@ -27,7 +28,7 @@ namespace MediaConch {
 // SQLLiteReport
 //***************************************************************************
 
-int SQLLiteReport::current_report_version = 7;
+int SQLLiteReport::current_report_version = 8;
 
 //***************************************************************************
 // Constructor/Destructor
@@ -120,6 +121,7 @@ int SQLLiteReport::update_report_table()
     UPDATE_REPORT_TABLE_FOR_VERSION(4);
     UPDATE_REPORT_TABLE_FOR_VERSION(5);
     UPDATE_REPORT_TABLE_FOR_VERSION(6);
+    UPDATE_REPORT_TABLE_FOR_VERSION(7);
 
 #undef UPDATE_REPORT_TABLE_FOR_VERSION
 
@@ -1418,6 +1420,111 @@ int SQLLiteReport::get_element_report_kind(int user, long file_id, MediaConchLib
         }
     }
 
+    return 0;
+}
+
+int SQLLiteReport::save_md5(int user, const std::map<long, std::map<size_t, std::vector<std::string> > >& md5s, std::string& err)
+{
+    if (!md5s.size())
+        return 0;
+
+    std::map<long, std::map<size_t, std::vector<std::string> > >::const_iterator it = md5s.begin();
+
+    for (; it != md5s.end(); ++it)
+    {
+        //TODO update md5
+        std::map<size_t, std::vector<std::string> >::const_iterator ite = it->second.begin();
+        for (; ite != it->second.end(); ++ite)
+        {
+            std::stringstream create;
+            reports.clear();
+            create << "INSERT INTO MEDIACONCH_MD5";
+            create << " (FILE_ID, STREAM, HASH) VALUES (?, ?, ?);";
+
+            query = create.str();
+            if (prepare_v2(query, err) < 0)
+                return -1;
+
+            int ret = sqlite3_bind_int(stmt, 1, it->first);
+            if (ret != SQLITE_OK)
+            {
+                err = get_sqlite_error(ret);
+                return -1;
+            }
+
+            ret = sqlite3_bind_int(stmt, 2, ite->first);
+            if (ret != SQLITE_OK)
+            {
+                err = get_sqlite_error(ret);
+                return -1;
+            }
+
+            std::string tmp;
+            Core::serialize_vec_to_str(ite->second, tmp);
+            ret = sqlite3_bind_text(stmt, 3, tmp.c_str(), tmp.size(), SQLITE_STATIC);
+            if (ret != SQLITE_OK)
+            {
+                err = get_sqlite_error(ret);
+                return -1;
+            }
+
+            if (execute())
+            {
+                err = error;
+                return -1;
+            }
+        }
+    }
+
+    return 0;
+}
+
+//---------------------------------------------------------------------------
+int SQLLiteReport::get_md5_from_id(int user, long id, std::vector<MediaConchLib::Checker_MD5*>& md5s, std::string& err)
+{
+    if (!file_id_match_user(user, id, err))
+    {
+        err = "File ID is not matching the user.";
+        return -1;
+    }
+
+    std::stringstream create;
+
+    reports.clear();
+    create << "SELECT STREAM, HASH FROM MEDIACONCH_MD5 WHERE FILE_ID = ?;";
+    query = create.str();
+
+    if (prepare_v2(query, err) < 0)
+        return -1;
+
+    int ret = sqlite3_bind_int(stmt, 1, id);
+    if (ret != SQLITE_OK)
+    {
+        err = get_sqlite_error(ret);
+        return -1;
+    }
+
+    if (execute())
+    {
+        err = get_sqlite_error(ret);
+        return -1;
+    }
+
+    for (size_t i = 0; i < reports.size(); ++i)
+    {
+        MediaConchLib::Checker_MD5* md5 = new MediaConchLib::Checker_MD5;
+        md5->file_id = id;
+        if (reports[i].find("STREAM") != reports[i].end())
+            md5->stream = std_string_to_uint(reports[i]["STREAM"]);
+
+        std::string hash;
+        if (reports[i].find("HASH") != reports[i].end())
+            hash = reports[i]["HASH"];
+
+        Core::parse_str_to_vec(hash, md5->hash);
+
+        md5s.push_back(md5);
+    }
     return 0;
 }
 

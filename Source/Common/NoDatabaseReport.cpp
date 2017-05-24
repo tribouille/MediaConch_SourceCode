@@ -544,4 +544,16 @@ int NoDatabaseReport::get_element_report_kind(int user, long file_id, MediaConch
     return 0;
 }
 
+//---------------------------------------------------------------------------
+int NoDatabaseReport::save_md5(int user, const std::map<long, std::map<size_t, std::vector<std::string> > >& md5s, std::string& err)
+{
+    return 0;
+}
+
+//---------------------------------------------------------------------------
+int NoDatabaseReport::get_md5_from_id(int user, long id, std::vector<MediaConchLib::Checker_MD5*>& md5s, std::string& err)
+{
+    return 0;
+}
+
 }

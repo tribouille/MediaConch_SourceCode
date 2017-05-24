@@ -53,6 +53,7 @@ public:
     REQ_FUNC(Checker_File_From_Id);
     REQ_FUNC(Checker_Id_From_Filename);
     REQ_FUNC(Checker_File_Information);
+    REQ_FUNC(Checker_Get_MD5);
 
     REQ_FUNC(Policy_Import);
     REQ_FUNC(Policy_Change_Info);
@@ -137,6 +138,8 @@ public:
                                                        RESTAPI::Checker_File_Information_Res& res, void* arg);
     typedef int (*on_default_values_for_type_command)(const RESTAPI::Default_Values_For_Type_Req* req,
                                                       RESTAPI::Default_Values_For_Type_Res& res, void* arg);
+    typedef int (*on_checker_get_md5_command)(const RESTAPI::Checker_Get_MD5_Req* req,
+                                              RESTAPI::Checker_Get_MD5_Res& res, void* arg);
 
     typedef int (*on_xslt_policy_create_command)(const RESTAPI::XSLT_Policy_Create_Req* req,
                                                  RESTAPI::XSLT_Policy_Create_Res& res, void* arg);
@@ -196,7 +199,7 @@ public:
                      checker_clear_cb(NULL), checker_stop_cb(NULL), checker_list_cb(NULL),
                      checker_validate_cb(NULL), checker_file_from_id_cb(NULL),
                      checker_id_from_filename_cb(NULL), checker_file_information_cb(NULL),
-                     default_values_for_type_cb(NULL),
+                     default_values_for_type_cb(NULL), checker_get_md5_cb(NULL),
                      xslt_policy_create_cb(NULL),
                      policy_import_cb(NULL),
                      policy_remove_cb(NULL),
@@ -242,6 +245,7 @@ public:
         on_checker_id_from_filename_command       checker_id_from_filename_cb;
         on_checker_file_information_command       checker_file_information_cb;
         on_default_values_for_type_command        default_values_for_type_cb;
+        on_checker_get_md5_command                checker_get_md5_cb;
 
         // policy
         on_xslt_policy_create_command             xslt_policy_create_cb;
