@@ -85,6 +85,8 @@ public:
     virtual int  get_elements(int user, std::vector<std::string>& vec, std::string& err);
     virtual int  get_elements(int user, std::vector<long>& vec, std::string& err);
     virtual int  get_element_report_kind(int user, long file_id, MediaConchLib::report& report_kind, std::string& err);
+    virtual int  save_md5(int user, const std::map<long, std::map<size_t, std::vector<std::string> > >& md5s, std::string& err);
+    virtual int  get_md5_from_id(int user, long id, std::vector<MediaConchLib::Checker_MD5*>& md5s, std::string& err);
 
 protected:
     virtual int init();

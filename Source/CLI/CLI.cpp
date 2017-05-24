@@ -91,7 +91,8 @@ void Log_0(struct MediaInfo_Event_Log_0* Event)
     CLI::CLI() : watch_folder_user(NULL), use_as_user(-1), use_daemon(false), asynchronous(false),
                  force_analyze(false), mil_analyze(true),
                  watch_folder_recursive(true), create_policy_mode(false), file_information(false),
-                 plugins_list_mode(false), list_watch_folders_mode(false), no_needs_files_mode(false)
+                 plugins_list_mode(false), list_watch_folders_mode(false), no_needs_files_mode(false),
+                 framemd5_compare_mode(false)
     {
         format = MediaConchLib::format_Max;
     }
@@ -242,6 +243,8 @@ void Log_0(struct MediaInfo_Event_Log_0* Event)
         //Ensure to analyze before creating library
         if (create_policy_mode)
             return run_create_policy(cr.files);
+        else if (framemd5_compare_mode)
+            return run_framemd5_compare(cr.files, err);
 
         // if compare two files
         if (policy_reference_file.size())
@@ -390,6 +393,80 @@ void Log_0(struct MediaInfo_Event_Log_0* Event)
 
         MediaInfoLib::String out_str = ZenLib::Ztring().From_UTF8(out.str());
         STRINGOUT(out_str);
+
+        return 0;
+    }
+
+    //--------------------------------------------------------------------------
+    int CLI::run_framemd5_compare(const std::vector<long>& files, std::string& err)
+    {
+        MediaConchLib::Checker_Get_MD5 c_g_md5;
+        MediaConchLib::Checker_Get_MD5Res res;
+        c_g_md5.user = use_as_user;
+        c_g_md5.files = files;
+
+        if (MCL.checker_get_md5(c_g_md5, &res, err) < 0)
+            return -1;
+
+        std::ifstream file(framemd5_file.c_str());
+        if (!file.is_open())
+        {
+            err = "Cannot open file: " + framemd5_file;
+            return -1;
+        }
+
+        std::map<size_t, std::vector<std::string> > file_MD5;
+        std::string line;
+        while (getline(file, line))
+        {
+            if (!line.size() || line[0] == '#')
+                continue;
+
+            size_t pos = line.find(',');
+            if (pos == std::string::npos)
+                continue;
+
+            std::string tmp = line.substr(0, pos);
+            char *end = NULL;
+            size_t stream = strtoul(tmp.c_str(), &end, 10);
+
+            pos = line.rfind(' ');
+            if (pos + 32 + 1 != line.size())
+                continue;
+
+            file_MD5[stream].push_back(line.substr(pos+1));
+        }
+        file.close();
+
+        std::map<size_t, std::vector<std::string> >::iterator it = file_MD5.begin();
+        for (; it != file_MD5.end(); ++it)
+        {
+            MediaConchLib::Checker_MD5* md5 = NULL;
+            for (size_t i = 0; i < res.md5s.size(); ++i)
+            {
+                if (!res.md5s[i] || it->first != res.md5s[i]->stream)
+                    continue;
+                md5 = res.md5s[i];
+                break;
+            }
+
+            if (!md5 || it->second.size() != md5->hash.size())
+            {
+                err = "MD5 mismatched.";
+                return -1;
+            }
+
+            for (size_t i = 0; i < md5->hash.size(); ++i)
+            {
+                if (it->second[i] != md5->hash[i])
+                {
+                    err = "MD5 mismatched.";
+                    return -1;
+                }
+            }
+        }
+
+        STRINGOUT(__T("MD5 are matching."));
 
         return 0;
     }
@@ -759,6 +836,13 @@ void Log_0(struct MediaInfo_Event_Log_0* Event)
     void CLI::set_create_policy_mode()
     {
         create_policy_mode = true;
+    }
+
+    //--------------------------------------------------------------------------
+    void CLI::set_framemd5_file_to_use(const std::string& file)
+    {
+        framemd5_file = file;
+        framemd5_compare_mode = true;
     }
 
     //--------------------------------------------------------------------------

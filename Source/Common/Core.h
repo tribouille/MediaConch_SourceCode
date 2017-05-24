@@ -102,6 +102,7 @@ public:
                                 const std::string& alias="");
 
     int         checker_status(int user, long file, MediaConchLib::Checker_StatusRes& res, std::string& error);
+    int         checker_get_md5(MediaConchLib::Checker_Get_MD5& c_md5, MediaConchLib::Checker_Get_MD5Res* result, std::string& err);
     int         remove_report(int user, const std::vector<long>& files, std::string& error);
 
     int         checker_list(int user, std::vector<std::string>& vec, std::string& error);
@@ -115,6 +116,7 @@ public:
     // Checker Helper
     //***************************************************************************
     int         file_add_generated_file(int user, long src_id, long generated_id, std::string& err);
+    int         file_add_md5s(int user, const std::map<long, std::map<size_t, std::vector<std::string> > >&, std::string& err);
     int         update_file_error(int user, long id, bool has_error, const std::string& error_log, std::string& err);
     int         get_reports_output_Html(int user, const std::vector<long>& file,
                                         const std::bitset<MediaConchLib::report_Max>& report_set, std::string& report);
@@ -122,6 +124,8 @@ public:
     static std::vector<std::pair<std::string,std::string> > parse_options_vec_from_string(const std::string& options);
     static std::string serialize_string_from_options_map(const std::map<std::string, std::string>& options);
     static std::map<std::string, std::string> parse_options_map_from_string(const std::string& options);
+    static void serialize_vec_to_str(const std::vector<std::string>& vec, std::string& str);
+    static void parse_str_to_vec(const std::string& str, std::vector<std::string>& vec);
 
     //***************************************************************************
     // Display

@@ -712,6 +712,40 @@ int DaemonClient::checker_validate(int user, MediaConchLib::report report,
     return 0;
 }
 
+//---------------------------------------------------------------------------
+int DaemonClient::checker_get_md5(MediaConchLib::Checker_Get_MD5& c_md5, MediaConchLib::Checker_Get_MD5Res* result, std::string& err)
+{
+    // FILE
+    RESTAPI::Checker_Get_MD5_Req  req;
+    RESTAPI::Checker_Get_MD5_Res *res = NULL;
+
+    req.user = c_md5.user;
+    for (size_t i = 0; i < c_md5.files.size(); ++i)
+        req.ids.push_back(c_md5.files[i]);
+
+    COMMON_HTTP_REQ_RES(checker_get_md5, -1)
+
+    if (res->nok)
+    {
+        err = res->nok->error;
+        delete res;
+        return -1;
+    }
+
+    for (size_t i = 0; i < res->md5s.size(); ++i)
+    {
+        MediaConchLib::Checker_MD5* md5 = new MediaConchLib::Checker_MD5;
+        md5->file_id = res->md5s[i]->file_id;
+        md5->stream = res->md5s[i]->stream;
+        for (size_t j = 0; j < res->md5s[i]->hashes.size(); ++j)
+            md5->hash.push_back(res->md5s[i]->hashes[j]);
+        result->md5s.push_back(md5);
+    }
+
+    delete res;
+    return 0;
+}
+
 //***************************************************************************
 // Policy
 //***************************************************************************

@@ -84,6 +84,8 @@ public:
     virtual int  get_elements(int user, std::vector<std::string>& vec, std::string& err) = 0;
     virtual int  get_elements(int user, std::vector<long>& vec, std::string& err) = 0;
     virtual int  get_element_report_kind(int user, long file_id, MediaConchLib::report& report_kind, std::string& err) = 0;
+    virtual int  save_md5(int user, const std::map<long, std::map<size_t, std::vector<std::string> > >& md5s, std::string& err) = 0;
+    virtual int  get_md5_from_id(int user, long id, std::vector<MediaConchLib::Checker_MD5*>& md5s, std::string& err) = 0;
 
     virtual int init_report() = 0;
 
@@ -97,6 +99,7 @@ protected:
     void        get_sql_query_for_update_report_table_v4(std::string& q);
     void        get_sql_query_for_update_report_table_v5(std::string& q);
     void        get_sql_query_for_update_report_table_v6(std::string& q);
+    void        get_sql_query_for_update_report_table_v7(std::string& q);
 
     // Helpers
     void        longs_to_string(const std::vector<long>&, std::string&);

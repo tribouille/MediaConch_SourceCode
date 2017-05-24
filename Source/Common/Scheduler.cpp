@@ -115,6 +115,8 @@ namespace MediaConch {
             return;
         }
 
+        md5s_to_add(el);
+
         if (another_work_to_do(el, MI) <= 0)
             return;
 
@@ -243,6 +245,17 @@ namespace MediaConch {
         }
 
         return 0;
+    }
+
+    int Scheduler::md5s_to_add(QueueElement *el)
+    {
+        if (!el->md5s.size())
+            return 0;
+
+        std::string err;
+        std::map<long, std::map<size_t, std::vector<std::string> > > tmp;
+        tmp[el->file_id] = el->md5s;
+        return core->file_add_md5s(el->user, tmp, err);
     }
 
     int Scheduler::another_work_to_do(QueueElement *el, MediaInfoNameSpace::MediaInfo* MI)

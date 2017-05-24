@@ -66,6 +66,7 @@ public:
     int  another_work_to_do(QueueElement* el, MediaInfoNameSpace::MediaInfo* MI);
     int  execute_pre_hook_plugins(QueueElement *el, std::string& err);
     int  attachments_to_add(QueueElement *el);
+    int  md5s_to_add(QueueElement *el);
     void write_log_timestamp(int level, std::string log);
     void log_cb(struct MediaInfo_Event_Log_0 *Event);
 

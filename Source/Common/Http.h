@@ -55,6 +55,7 @@ public:
     int send_request(RESTAPI::Checker_Id_From_Filename_Req& req, std::string& err);
     int send_request(RESTAPI::Checker_File_Information_Req& req, std::string& err);
     int send_request(RESTAPI::Default_Values_For_Type_Req& req, std::string& err);
+    int send_request(RESTAPI::Checker_Get_MD5_Req& req, std::string& err);
 
     // Policy
     int send_request(RESTAPI::XSLT_Policy_Create_Req& req, std::string& err);

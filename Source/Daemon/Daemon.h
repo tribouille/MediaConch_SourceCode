@@ -119,6 +119,8 @@ namespace MediaConch
                                                        RESTAPI::Checker_File_Information_Res& res, void *arg);
         static int on_default_values_for_type_command(const RESTAPI::Default_Values_For_Type_Req* req,
                                                       RESTAPI::Default_Values_For_Type_Res& res, void *arg);
+        static int on_checker_get_md5_command(const RESTAPI::Checker_Get_MD5_Req* req,
+                                              RESTAPI::Checker_Get_MD5_Res& res, void *arg);
 
         //  Policy
         static int on_xslt_policy_create_command(const RESTAPI::XSLT_Policy_Create_Req* req,

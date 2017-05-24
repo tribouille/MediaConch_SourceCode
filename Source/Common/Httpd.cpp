@@ -86,6 +86,7 @@ int Httpd::send_result()
     MAKE_REQ_FUNC(checker_file_from_id, Checker_File_From_Id)
     MAKE_REQ_FUNC(checker_id_from_filename, Checker_Id_From_Filename)
     MAKE_REQ_FUNC(checker_file_information, Checker_File_Information)
+    MAKE_REQ_FUNC(checker_get_md5, Checker_Get_MD5)
 
     MAKE_REQ_FUNC(policy_import, Policy_Import);
     MAKE_REQ_FUNC(policy_change_info, Policy_Change_Info);

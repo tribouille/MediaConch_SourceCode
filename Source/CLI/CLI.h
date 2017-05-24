@@ -23,9 +23,13 @@ namespace MediaConch
     //--------------------------------------------------------------------------
     class CLI
     {
+
+        //***************************************************************************
+        // Internal structure
+        //***************************************************************************
       public:
-        CLI();
-        ~CLI();
+            CLI();
+            ~CLI();
 
         int  parse_args(const std::vector<std::string>& args);
         int  init(std::string& err);
@@ -59,6 +63,7 @@ namespace MediaConch
         int  set_watch_folder_not_recursive();
         int  set_watch_folder_user(const std::string& user);
         void set_list_watch_folders_mode();
+        void set_framemd5_file_to_use(const std::string& file);
 
       private:
         CLI(const CLI&);
@@ -70,6 +75,7 @@ namespace MediaConch
         int  run_plugins_list(std::string& err);
         int  run_watch_folders_list(std::string& err);
         int  run_watch_folder_cmd(std::string& err);
+        int  run_framemd5_compare(const std::vector<long>& file_ids, std::string& err);
         int  is_ready(long file_id, std::vector<long>& file_ids, MediaConchLib::report& report_kind, std::string& err);
         void add_files_recursively(const std::string& filename);
         void file_info_report(const MediaConchLib::Checker_FileInfo* info, std::string& report);
@@ -86,6 +92,7 @@ namespace MediaConch
         std::string              policy_reference_file;
         std::string              watch_folder;
         std::string              watch_folder_reports;
+        std::string              framemd5_file;
         long                    *watch_folder_user;
         std::bitset<MediaConchLib::report_Max> report_set;
         MediaConchLib::format   format;
@@ -101,6 +108,7 @@ namespace MediaConch
         bool                    plugins_list_mode;
         bool                    list_watch_folders_mode;
         bool                    no_needs_files_mode;
+        bool                    framemd5_compare_mode;
     };
 
 }

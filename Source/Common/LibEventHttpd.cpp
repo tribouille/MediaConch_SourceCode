@@ -935,6 +935,31 @@ void LibEventHttpd::request_post_coming(struct evhttp_request *req, std::string&
             error = rest.get_error();
     }
 
+    else if (!std::string("/checker_get_md5").compare(uri_path))
+    {
+        RESTAPI::Checker_Get_MD5_Req *r = NULL;
+        get_request(json, &r);
+        if (!r)
+        {
+            ret_msg = "NOVALIDCONTENT";
+            code = HTTP_BADREQUEST;
+            goto send;
+        }
+
+        RESTAPI::Checker_Get_MD5_Res res;
+        if (commands.checker_get_md5_cb && commands.checker_get_md5_cb(r, res, parent) < 0)
+        {
+            delete r;
+            ret_msg = "NOVALIDCONTENT";
+            code = HTTP_BADREQUEST;
+            goto send;
+        }
+
+        delete r;
+        if (rest.serialize_checker_get_md5_res(res, result, err) < 0)
+            error = rest.get_error();
+    }
+
     else if (!std::string("/policy_import").compare(uri_path))
     {
         RESTAPI::Policy_Import_Req *r = NULL;

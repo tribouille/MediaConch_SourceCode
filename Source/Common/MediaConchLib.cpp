@@ -400,6 +400,20 @@ int MediaConchLib::checker_validate(int user, report report, const std::vector<l
 }
 
 //---------------------------------------------------------------------------
+int MediaConchLib::checker_get_md5(Checker_Get_MD5& c_md5, Checker_Get_MD5Res* result, std::string& error)
+{
+    if (!c_md5.files.size())
+    {
+        error = "No file given.";
+        return -1;
+    }
+
+    if (use_daemon)
+        return daemon_client->checker_get_md5(c_md5, result, error);
+    return core->checker_get_md5(c_md5, result, error);
+}
+
+//---------------------------------------------------------------------------
 int MediaConchLib::remove_report(int user, const std::vector<long>& files, std::string& error)
 {
     if (!files.size())

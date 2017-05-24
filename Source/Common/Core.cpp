@@ -475,6 +475,16 @@ int Core::file_add_generated_file(int user, long src_id, long generated_id, std:
 }
 
 //---------------------------------------------------------------------------
+int Core::file_add_md5s(int user, const std::map<long, std::map<size_t, std::vector<std::string> > >& md5s, std::string& err)
+{
+    db_mutex.Enter();
+    int ret = get_db()->save_md5(user, md5s, err);
+    db_mutex.Leave();
+
+    return ret;
+}
+
+//---------------------------------------------------------------------------
 int Core::update_file_error(int user, long id, bool has_error, const std::string& error_log, std::string& err)
 {
     db_mutex.Enter();
@@ -523,6 +533,21 @@ int Core::checker_status(int user, long file_id, MediaConchLib::Checker_StatusRe
     }
 
     return ret;
+}
+
+//---------------------------------------------------------------------------
+int Core::checker_get_md5(MediaConchLib::Checker_Get_MD5& cr, MediaConchLib::Checker_Get_MD5Res* result, std::string& err)
+{
+    for (size_t i = 0; i < cr.files.size(); ++i)
+    {
+        db_mutex.Enter();
+        int ret = get_db()->get_md5_from_id(cr.user, cr.files[i], result->md5s, err);
+        db_mutex.Leave();
+        if (ret < 0)
+            return ret;
+    }
+
+    return 0;
 }
 
 //---------------------------------------------------------------------------
@@ -1068,6 +1093,45 @@ std::vector<std::pair<std::string,std::string> > Core::parse_options_vec_from_st
     }
 
     return toreturn;
+}
+
+//---------------------------------------------------------------------------
+void Core::serialize_vec_to_str(const std::vector<std::string>& vec, std::string& str)
+{
+    std::stringstream toreturn;
+
+    for (size_t i = 0; i < vec.size(); ++i)
+        toreturn << vec[i].size() << "," << vec[i];
+
+    str = toreturn.str();
+}
+
+//---------------------------------------------------------------------------
+void Core::parse_str_to_vec(const std::string& str, std::vector<std::string>& vec)
+{
+    size_t pos = 0;
+    size_t start;
+
+    while (pos != std::string::npos)
+    {
+        start = pos;
+        pos = str.find(",", start);
+        if (pos == std::string::npos)
+            continue;
+
+        std::string size = str.substr(start, pos - start);
+        pos += 1;
+        char *end = NULL;
+        long len = strtol(size.c_str(), &end, 10);
+        if (len < 0 || pos + len > str.size())
+        {
+            pos = std::string::npos;
+            continue;
+        }
+
+        vec.push_back(str.substr(pos, len));
+        pos += len;
+    }
 }
 
 #if defined(WINDOWS)
