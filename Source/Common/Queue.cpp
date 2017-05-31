@@ -69,6 +69,10 @@ static void __stdcall Event_CallBackFunction(unsigned char* Data_Content, size_t
             if (EventVersion == 0)
                 queue->attachment_cb((struct MediaInfo_Event_Global_AttachedFile_0 *)Data_Content);
             break;
+        case MediaInfo_Event_Global_FrameContent:
+            if (EventVersion == 0 && Data_Size >= sizeof(MediaInfo_Event_Global_FrameContent_0))
+                queue->frame_content_cb((MediaInfo_Event_Global_FrameContent_0*)Data_Content);
+            break;
         case MediaInfo_Event_Global_FrameHash:
             if (EventVersion == 0 && Data_Size >= sizeof(MediaInfo_Event_Global_FrameHash_0))
                 queue->framehash_cb((MediaInfo_Event_Global_FrameHash_0*)Data_Content);
@@ -212,15 +216,8 @@ int QueueElement::framehash_cb(MediaInfo_Event_Global_FrameHash_0 *event)
         return 0;
 
     size_t stream = 0;
-    size_t i = 0;
-    for (; i < stream_idx.size(); ++i)
-        if (stream_idx[i] == event->StreamIDs[0])
-            break;
-
-    if (i == stream_idx.size())
+    if (get_stream_idx(event->StreamIDs[0], stream) < 0)
         return -1;
-
-    stream = i;
 
     for (size_t i = 0; i < event->Hashes_Size; ++i)
     {
@@ -247,6 +244,30 @@ int QueueElement::log_cb(struct MediaInfo_Event_Log_0 *event)
 {
     if (scheduler)
         scheduler->log_cb(event);
+    return 0;
+}
+
+//---------------------------------------------------------------------------
+int QueueElement::frame_content_cb(MediaInfo_Event_Global_FrameContent_0 *event)
+{
+    std::string error;
+    if (scheduler)
+        scheduler->manage_frame(this, event, error);
+    return 0;
+}
+
+//---------------------------------------------------------------------------
+int QueueElement::get_stream_idx(size_t id, size_t& stream)
+{
+    size_t i = 0;
+    for (; i < stream_idx.size(); ++i)
+        if (stream_idx[i] == id)
+            break;
+
+    if (i == stream_idx.size())
+        return -1;
+
+    stream = i;
     return 0;
 }
 

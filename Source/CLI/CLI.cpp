@@ -287,17 +287,18 @@ void Log_0(struct MediaInfo_Event_Log_0* Event)
         cr.display_content = &display_content;
         MCL.checker_get_report(cr, &result, error);
 
-        if (!report_set[MediaConchLib::report_QCTools])
+        if (report_set[MediaConchLib::report_QCTools])
         {
-            MediaInfoLib::String report_mi = ZenLib::Ztring().From_UTF8(result.report);
-
-            STRINGOUT(report_mi);
-            //Output, in a file if needed
-            if (!LogFile_FileName.empty())
-                LogFile_Action(report_mi);
-        }
-        else
             output_qctools_report(result.report);
+            return 0;
+        }
+
+        MediaInfoLib::String report_mi = ZenLib::Ztring().From_UTF8(result.report);
+
+        STRINGOUT(report_mi);
+        //Output, in a file if needed
+        if (!LogFile_FileName.empty())
+            LogFile_Action(report_mi);
 
         return 0;
     }

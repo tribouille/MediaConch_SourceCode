@@ -76,9 +76,11 @@ namespace MediaConch
         void                               stop();
         double                             percent_done();
         int                                attachment_cb(struct MediaInfo_Event_Global_AttachedFile_0 *Event);
+        int                                frame_content_cb(struct MediaInfo_Event_Global_FrameContent_0 *Event);
         int                                framehash_cb(struct MediaInfo_Event_Global_FrameHash_0 *Event);
         int                                register_new_stream_cb(struct MediaInfo_Event_Global_NewStream_0 *Event);
         int                                log_cb(struct MediaInfo_Event_Log_0 *Event);
+        int                                get_stream_idx(size_t id, size_t& stream);
 
     private:
         Scheduler*                         scheduler;
