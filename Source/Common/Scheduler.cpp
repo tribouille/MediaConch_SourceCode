@@ -328,14 +328,13 @@ namespace MediaConch {
     {
         std::map<std::string, Plugin*> stats = core->get_stats_plugins();
 
-        if (!stats.size() || !event->StreamIDs_Size)
+        if (!stats.size() || !event->StreamIDs_Size || !event->Planes_Size)
             return 0;
 
         size_t stream = 0;
         if (el->get_stream_idx(event->StreamIDs[0], stream) < 0)
             return -1;
 
-        std::string frame(event->Buffer, event->Buffer_Size);
         std::map<std::string, Plugin*>::iterator it = stats.begin();
         for (; it != stats.end(); ++it)
         {
@@ -348,22 +347,15 @@ namespace MediaConch {
             else
                 continue;
 
-            //TODO
-            p->set_frame(frame);
-            p->set_width(event->Width);
-            p->set_height(event->Height);
+            p->set_frame(event);
             p->set_stream_idx(stream);
-            p->set_duration(1.0);
-            p->set_time_base_num(1);
-            p->set_time_base_den(1);
-            p->set_sar_num(0);
-            p->set_sar_den(1);
-            if (it->second->get_name() == "StatsFrameFFmpeg")
-                ((PluginStatsFrameFFmpeg*)p)->set_pix_fmt(298); //AV_PIX_FMT_BGR0
+            if (p->run(error) < 0)
+            {
+                fprintf(stderr, "error=%s\n", error.c_str());
+                continue;
+            }
 
-            printf("passe la\n");
-            p->run(error);
-            std::string plugin = it->second->get_id();
+            std::string plugin = p->get_id();
             const std::vector<StatsFrame*>& stats = p->get_stats();
             for (size_t i = 0; i < stats.size(); ++i)
             {
@@ -371,6 +363,7 @@ namespace MediaConch {
                     stats[i]->data_to_vector(el->stats[plugin][stream]);
             }
         }
+
         return 0;
     }
 

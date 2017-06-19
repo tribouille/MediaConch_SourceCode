@@ -72,6 +72,12 @@ namespace MediaConch {
     //---------------------------------------------------------------------------
     int PluginStatsFrameFFmpeg::init(std::string& error)
     {
+        if (!frame || !frame->Planes_Size)
+        {
+            error = "The frame is not valid";
+            return -1;
+        }
+
         av_frame = av_frame_alloc();
         if (!av_frame)
         {
@@ -96,6 +102,13 @@ namespace MediaConch {
 
     int PluginStatsFrameFFmpeg::init_filters(const std::string& filters_descr, std::string& error)
     {
+        if (!frame->Planes_Size)
+        {
+            error = "No plane in this frame";
+            return -1;
+        }
+
+        // Init AV stuff
         AVFilterInOut *outputs = avfilter_inout_alloc();
         AVFilterInOut *inputs  = avfilter_inout_alloc();
 
@@ -104,9 +117,12 @@ namespace MediaConch {
         filter_sink = avfilter_get_by_name("buffersink");
 
         std::stringstream ss;
-        ss << "video_size=" << width << "x" << height << ":pix_fmt=" << pix_fmt;
-        ss << ":time_base=" << time_base_num << "/" << time_base_den;
-        ss << ":pixel_aspect=" << sar_num << "/" << sar_den;
+        ss << "video_size=" << frame->Planes[0]->Width << "x" << frame->Planes[0]->Height;
+
+        size_t pix_fmt = 298; //AV_PIX_FMT_BGR0
+        ss << ":pix_fmt=" << pix_fmt;
+        ss << ":time_base=" << 1 << "/" << 1;
+        ss << ":pixel_aspect=" << 0 << "/" << 1;
 
         int ret;
         if ((ret = avfilter_graph_create_filter(&filter_src_ctx, filter_src, "in",
@@ -155,14 +171,13 @@ namespace MediaConch {
         if (init_filters(filter_descr, error) < 0)
             return -1;
 
-        av_frame->pts = av_frame_get_best_effort_timestamp(av_frame);
-        av_frame->data[0] = (uint8_t*)frame.c_str();
-        av_frame->linesize[0] = width * 4;
-        int padd = av_frame->linesize[0] % 32;
-        av_frame->linesize[0] += padd;
-        av_frame->width = width;
-        av_frame->height = height;
-        av_frame->format = pix_fmt;
+        av_frame->pts = frame->PTS;
+        av_frame->pkt_dts = frame->DTS;
+        av_frame->data[0] = frame->Planes[0]->Buffer;
+        av_frame->linesize[0] = frame->Planes[0]->AllBytesPerLine();
+        av_frame->width = frame->Planes[0]->Width;
+        av_frame->height = frame->Planes[0]->Height;
+        av_frame->format = 298; //AV_PIX_FMT_BGR0
 
         /* push the decoded frame into the filtergraph */
         if (av_buffersrc_add_frame_flags(filter_src_ctx, av_frame, AV_BUFFERSRC_FLAG_KEEP_REF) < 0)
@@ -199,7 +214,7 @@ namespace MediaConch {
 
         StatsFrame *stat = new StatsFrame;
         stat->stream_idx = stream_idx;
-        stat->duration = duration;
+        // stat->duration = duration;
 
         AVDictionaryEntry *entry = NULL;
         for (;;)

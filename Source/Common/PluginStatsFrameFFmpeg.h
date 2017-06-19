@@ -47,30 +47,29 @@ public:
     virtual ~PluginStatsFrameFFmpeg();
     PluginStatsFrameFFmpeg(const PluginStatsFrameFFmpeg&);
 
-    virtual int  load_plugin(const std::map<std::string, Container::Value>& obj, std::string& error);
-    virtual int  run(std::string& error);
+    virtual int                            load_plugin(const std::map<std::string, Container::Value>& obj, std::string& error);
+    virtual int                            run(std::string& error);
 
-    void         set_pix_fmt(int px) { pix_fmt = (AVPixelFormat)px; }
 
 private:
     PluginStatsFrameFFmpeg&    operator=(const PluginStatsFrameFFmpeg&);
 
-    int          init(std::string& error);
-    int          init_filters(const std::string& filters_descr, std::string& error);
-    int          add_filters(std::string& error);
-    int          register_frame_stats(struct AVFrame* Frame);
-    void         register_stats_in_db();
+    int                                    init(std::string& error);
+    int                                    init_filters(const std::string& filters_descr, std::string& error);
+    int                                    add_filters(std::string& error);
+    int                                    register_frame_stats(struct AVFrame* Frame);
+    void                                   register_stats_in_db();
 
-    std::string                filter_descr;
-    std::string                stats_dir;
+    std::string                            filter_descr;
+    std::string                            stats_dir;
 
-    AVPixelFormat              pix_fmt;
-    AVFrame                   *av_frame;
-    AVFilterGraph             *filter_graph;
-    AVFilter                  *filter_src;
-    AVFilter                  *filter_sink;
-    AVFilterContext           *filter_src_ctx;
-    AVFilterContext           *filter_sink_ctx;
+    AVPixelFormat                          pix_fmt;
+    AVFrame                               *av_frame;
+    AVFilterGraph                         *filter_graph;
+    AVFilter                              *filter_src;
+    AVFilter                              *filter_sink;
+    AVFilterContext                       *filter_src_ctx;
+    AVFilterContext                       *filter_sink_ctx;
 };
 
 }
@@ -102,8 +101,6 @@ public:
         error = "MediaConch is not compiled with FFmpeg support.";
         return -1;
     }
-
-    void         set_pix_fmt(int) { }
 
 private:
     PluginStatsFrameFFmpeg&    operator=(const PluginStatsFrameFFmpeg&);

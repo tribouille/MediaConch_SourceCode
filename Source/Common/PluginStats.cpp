@@ -24,7 +24,7 @@ namespace MediaConch {
 
     //---------------------------------------------------------------------------
     PluginStats::PluginStats()
-        : Plugin()
+        : Plugin(), frame(NULL), stream_idx(0)
     {
         type = MediaConchLib::PLUGIN_STAT;
     }

@@ -33,39 +33,24 @@ public:
     virtual ~PluginStats();
     PluginStats(const PluginStats& p);
 
-    virtual int  load_plugin(const std::map<std::string, Container::Value>& obj, std::string& error);
+    virtual int                            load_plugin(const std::map<std::string, Container::Value>& obj, std::string& error);
 
-    void         set_frame(const std::string& f) { frame = f; }
-    void         set_width(size_t s) { width = s; }
-    void         set_height(size_t s) { height = s; }
-    void         set_stream_idx(size_t s) { stream_idx = s; }
-    void         set_duration(double s) { duration = s; }
-    void         set_time_base_num(size_t s) { time_base_num = s; }
-    void         set_time_base_den(size_t s) { time_base_den = s; }
-    void         set_sar_num(size_t s) { sar_num = s; }
-    void         set_sar_den(size_t s) { sar_den = s; }
+    void                                   set_frame(MediaInfo_Event_Global_FrameContent_0 *f) { frame = f; }
+    void                                   set_stream_idx(size_t s) { stream_idx = s; }
 
-    std::string  get_stats_dir() { return stats_dir; }
-    const std::vector<StatsFrame*>& get_stats() { return stats; }
+    std::string                            get_stats_dir() const { return stats_dir; }
+    const                                  std::vector<StatsFrame*>& get_stats() { return stats; }
 
 protected:
     // Configuration
-    std::string                stats_dir;
-
-    // Data
-    std::string  frame;
+    std::string                            stats_dir;
 
     // video components
-    size_t                    width;
-    size_t                    height;
-    size_t                    stream_idx;
-    double                    duration;
-    size_t                    time_base_num;
-    size_t                    time_base_den;
-    size_t                    sar_num;
-    size_t                    sar_den;
+    std::vector<StatsFrame*>               stats;
 
-    std::vector<StatsFrame*>  stats;
+    // Data
+    MediaInfo_Event_Global_FrameContent_0 *frame;
+    size_t                                 stream_idx;
 
 private:
     PluginStats &operator=(const PluginStats&);
